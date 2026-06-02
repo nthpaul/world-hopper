@@ -44,6 +44,7 @@ export type SlotRecord = {
 export type BenchRunStatus = "starting" | "running" | "complete" | "failed" | "stopped";
 
 export type BenchResults = {
+  runName?: string;
   startedAt: string;
   endedAt: string;
   config: {

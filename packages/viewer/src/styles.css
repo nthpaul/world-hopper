@@ -320,9 +320,156 @@ tr:last-child td {
 
 .problems-checkboxes {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.problem-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.75rem 0.85rem;
+  background: var(--cream);
+  border: 1px solid #ddd5c4;
+  cursor: pointer;
+}
+
+.problem-option input {
+  margin-top: 0.2rem;
+}
+
+.problem-option-body {
+  min-width: 0;
+}
+
+.problem-option-header {
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.problem-option-header code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  background: #fff;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid #ddd5c4;
+}
+
+.problem-option-prompt {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+  margin-bottom: 0.25rem;
+}
+
+.problem-option-artifacts {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.problem-option-artifacts code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.pack-tasks-reference {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd5c4;
+}
+
+.pack-tasks-reference h3 {
+  font-size: 1rem;
+  font-weight: normal;
+  margin: 0 0 0.35rem;
+}
+
+.pack-tasks-intro {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  margin: 0 0 1rem;
+}
+
+.problem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.problem-card {
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid #ddd5c4;
+}
+
+.problem-card-header {
+  display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.problem-id {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  background: var(--cream-dark);
+  padding: 0.1rem 0.35rem;
+}
+
+.problem-title {
+  font-size: 0.95rem;
+}
+
+.problem-prompt {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+.problem-artifacts {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.problem-artifacts-label {
+  font-weight: normal;
+  margin-right: 0.35rem;
+}
+
+.problem-artifacts code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.problem-flag {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.35rem;
+  background: var(--cream-dark);
+  color: var(--ink-muted);
+}
+
+.problem-solved-badge,
+.problem-unsolved-badge {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.35rem;
+}
+
+.problem-solved-badge {
+  background: #e8f0ea;
+  color: #3d6b4f;
+}
+
+.problem-unsolved-badge {
+  background: #ebe4d6;
+  color: var(--ink-muted);
 }
 
 .checkbox-inline {

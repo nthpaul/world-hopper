@@ -48,6 +48,7 @@ services:
       DEBUG_LOG_PATH: /app/.cursor-debug/debug-afd95d.log
     volumes:
       - ./results:/app/results
+      - ./task-packs:/task-packs:ro
       - ./.cursor:/app/.cursor-debug
       - ./configs:/app/configs:ro
 

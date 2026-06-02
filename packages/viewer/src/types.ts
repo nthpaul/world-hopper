@@ -1,6 +1,18 @@
 export type BenchRunStatus = "starting" | "running" | "complete" | "failed" | "stopped";
 
+export type ModelOption = {
+  id: string;
+  displayName: string;
+  description?: string;
+  aliases?: string[];
+};
+
+export type ModelsResponse = {
+  models: ModelOption[];
+};
+
 export type BenchResults = {
+  runName?: string;
   startedAt: string;
   endedAt: string;
   config: {
@@ -44,6 +56,15 @@ export type BenchResults = {
   };
 };
 
+export type ProblemMeta = {
+  id: string;
+  title: string;
+  prompt: string;
+  artifacts?: string[];
+  allowShell?: boolean;
+  allowMove?: boolean;
+};
+
 export type BenchProfileMeta = {
   id: string;
   path: string;
@@ -59,7 +80,7 @@ export type BenchProfileMeta = {
 
 export type MetaResponse = {
   profiles: BenchProfileMeta[];
-  taskPacks: Array<{ id: string; problems: Array<{ id: string; title: string }> }>;
+  taskPacks: Array<{ id: string; problems: ProblemMeta[] }>;
   defaults: {
     model: string;
     slotMs: number;
@@ -80,6 +101,11 @@ export type BenchStartRequest = {
   taskPack?: string;
   problems?: string[];
   worldCount?: number;
+};
+
+export type RunListEntry = {
+  file: string;
+  label: string;
 };
 
 export type BenchStatus = {

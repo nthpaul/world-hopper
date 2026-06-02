@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { BenchResults, BenchRunStatus, LiveBenchResults, SlotRecord } from "./types.js";
 import type { BenchConfig } from "./types.js";
 import { listProblems } from "./task-packs.js";
+import { buildResultsFilename, buildRunName } from "./run-name.js";
 
 export const LIVE_RESULTS_FILENAME = "live.json";
 
@@ -12,9 +13,10 @@ export function initResultsDir(resultsDir: string): void {
 
 export function writeResults(resultsDir: string, results: BenchResults): string {
   initResultsDir(resultsDir);
-  const filename = `${results.startedAt.replace(/[:.]/g, "-")}.json`;
+  const runName = results.runName ?? buildRunName(results.config);
+  const filename = buildResultsFilename(runName, results.startedAt);
   const path = join(resultsDir, filename);
-  writeFileSync(path, JSON.stringify(results, null, 2));
+  writeFileSync(path, JSON.stringify({ ...results, runName }, null, 2));
   return path;
 }
 
@@ -83,13 +85,16 @@ export function publishLiveResults(
     agentId: string;
     slots: SlotRecord[];
     aggregates: BenchResults["aggregates"];
+    runName?: string;
     currentSlot?: LiveBenchResults["currentSlot"];
     error?: string;
     resultsFile?: string;
   },
 ): string {
+  const runName = args.runName ?? buildRunName(args.config);
   return writeLiveResults(resultsDir, {
     status: args.status,
+    runName,
     startedAt: args.startedAt,
     endedAt: args.endedAt,
     config: buildResultsConfig(args.config),

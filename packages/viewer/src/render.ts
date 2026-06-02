@@ -1,4 +1,5 @@
-import type { BenchResults, BenchRunStatus } from "./types.js";
+import type { BenchResults, BenchRunStatus, ProblemMeta } from "./types.js";
+import { renderProblemsRunSummary } from "./render-problems.js";
 
 const WORLD_PALETTE = [
   "#7a6a52",
@@ -48,7 +49,11 @@ function statusLabel(status: BenchRunStatus | undefined): string {
   }
 }
 
-export function renderResults(data: BenchResults, sourceLabel: string): string {
+export function renderResults(
+  data: BenchResults,
+  sourceLabel: string,
+  problems: ProblemMeta[] = [],
+): string {
   const isLive = data.status === "starting" || data.status === "running";
   const endMs =
     isLive ? Date.now() : new Date(data.endedAt || data.updatedAt || data.startedAt).getTime();
@@ -82,11 +87,15 @@ export function renderResults(data: BenchResults, sourceLabel: string): string {
     .map((id) => {
       const visits = aggregates.perWorldVisitCount?.[id] ?? 0;
       const solved = aggregates.uniqueSolvedByWorld?.[id] ?? [];
+      const solvedLabels = solved.map((pid) => {
+        const prob = problems.find((p) => p.id === pid);
+        return prob ? `${prob.title} (${pid})` : pid;
+      });
       const isActive = data.currentSlot?.worldId === id;
       return `<div class="world-cell${isActive ? " world-cell-active" : ""}">
         <div class="world-cell-id">world-<span class="num">${id}</span></div>
         <div class="world-cell-visits num">${visits}</div>
-        <div class="world-cell-solved">${solved.length ? solved.join(", ") : "—"}</div>
+        <div class="world-cell-solved">${solvedLabels.length ? solvedLabels.join("; ") : "—"}</div>
       </div>`;
     })
     .join("");
@@ -112,10 +121,10 @@ export function renderResults(data: BenchResults, sourceLabel: string): string {
     })
     .join("");
 
-  const problems =
-    config.problemIds?.length ?
-      `<ul class="problems-list">${config.problemIds.map((p) => `<li>${p}</li>`).join("")}</ul>`
-    : "<p>All problems in pack</p>";
+  const problemsHtml = renderProblemsRunSummary(
+    problems,
+    aggregates.uniqueSolvedByWorld ?? {},
+  );
 
   const endedRow =
     isLive ?
@@ -130,7 +139,7 @@ export function renderResults(data: BenchResults, sourceLabel: string): string {
     <header class="results-header">
       <div>
         <h1>World-Hop Benchmark ${statusBadge}</h1>
-        <p>${sourceLabel}${data.resultsFile ? ` → ${data.resultsFile}` : ""}</p>
+        <p>${sourceLabel}</p>
       </div>
     </header>
 
@@ -168,8 +177,8 @@ export function renderResults(data: BenchResults, sourceLabel: string): string {
         ${endedRow}
         <dt>Agent</dt><dd style="word-break:break-all;font-size:0.85rem">${data.agentId || "—"}</dd>
       </dl>
-      <h2 style="margin-top:1.5rem">Problems</h2>
-      ${problems}
+      <h2 style="margin-top:1.5rem">Tasks in this run</h2>
+      ${problemsHtml}
     </section>
 
     <section>

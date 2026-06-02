@@ -12,6 +12,7 @@ import {
 import type { BenchConfig, BenchResults, SlotRecord } from "./types.js";
 import { debugLog } from "./debug-log.js";
 import { listProblems } from "./task-packs.js";
+import { buildRunName } from "./run-name.js";
 
 async function cancelRun(run: Run | undefined): Promise<{ status?: string; runId?: string }> {
   if (!run) return {};
@@ -58,6 +59,7 @@ async function consumeRunStream(run: Run): Promise<{
 
 export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   const startedAt = new Date().toISOString();
+  const runName = buildRunName(config);
   const rng = createSeededRng(config.benchSeed);
   const slots: SlotRecord[] = [];
   let aggregates = buildAggregates(slots);
@@ -68,6 +70,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
     startedAt,
     endedAt: startedAt,
     config,
+    runName,
     agentId,
     slots,
     aggregates,
@@ -102,6 +105,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
       startedAt,
       endedAt: new Date().toISOString(),
       config,
+      runName,
       agentId,
       slots,
       aggregates,
@@ -121,6 +125,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         startedAt,
         endedAt: new Date().toISOString(),
         config,
+        runName,
         agentId,
         slots,
         aggregates,
@@ -204,6 +209,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         startedAt,
         endedAt: slotEnded.toISOString(),
         config,
+        runName,
         agentId,
         slots,
         aggregates,
@@ -225,6 +231,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
       startedAt,
       endedAt: new Date().toISOString(),
       config,
+      runName,
       agentId,
       slots,
       aggregates,
@@ -244,6 +251,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   }
 
   const results: BenchResults = {
+    runName,
     startedAt,
     endedAt,
     config: buildResultsConfig(config),
@@ -258,12 +266,13 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
     startedAt,
     endedAt,
     config,
+    runName,
     agentId,
     slots,
     aggregates,
     resultsFile: basename(path),
   });
-  console.log(`Benchmark complete. Results written to ${path}`);
+  console.log(`Benchmark complete. ${runName} → ${path}`);
   console.log(
     JSON.stringify(
       {

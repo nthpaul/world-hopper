@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getBenchStatus, initBenchRunner, startBench, stopBench, type BenchStartRequest } from "./bench-runner.js";
-import { loadMeta } from "./meta.js";
+import { loadMeta, loadDotEnv } from "./meta.js";
+import { labelForResults } from "./run-name.js";
+import { listSelectableModels } from "./models.js";
 
 const LIVE_FILENAME = "live.json";
 
@@ -34,6 +36,13 @@ export function createApiHandler(root: string) {
   ): Promise<boolean> {
     if (url === "/api/meta" && req.method === "GET") {
       sendJson(res, 200, loadMeta(root));
+      return true;
+    }
+
+    if (url === "/api/models" && req.method === "GET") {
+      const dotenv = loadDotEnv(root);
+      const models = await listSelectableModels(dotenv.CURSOR_API_KEY);
+      sendJson(res, 200, { models });
       return true;
     }
 
@@ -91,7 +100,17 @@ export function createApiHandler(root: string) {
           .filter((f) => f.endsWith(".json") && f !== LIVE_FILENAME)
           .sort()
           .reverse();
-        sendJson(res, 200, files);
+        const runs = files.map((file) => {
+          try {
+            const data = JSON.parse(
+              fs.readFileSync(path.join(resultsDir, file), "utf8"),
+            ) as { runName?: string; config?: { modelId: string; benchDurationMs: number; slotMs: number; profileName?: string; taskPack?: string } };
+            return { file, label: labelForResults(data, file) };
+          } catch {
+            return { file, label: file.replace(/\.json$/, "") };
+          }
+        });
+        sendJson(res, 200, runs);
       } catch (err) {
         sendJson(res, 500, { error: String(err) });
       }

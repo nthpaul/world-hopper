@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { loadDotEnv } from "./meta.js";
+import { buildRunName } from "./run-name.js";
 
 export type BenchStartRequest = {
   profile?: string;
@@ -75,8 +76,16 @@ function writeStartingLive(config: BenchStartRequest): void {
   const startedAt = new Date().toISOString();
   const merged = mergeProfile(config);
   const durationMs = (merged.durationSec ?? 60) * 1000;
+  const runName = buildRunName({
+    modelId: merged.model ?? "composer-2.5",
+    benchDurationMs: durationMs,
+    slotMs: merged.slotMs ?? 15000,
+    profileName: merged.name ?? merged.profile,
+    taskPack: merged.taskPack ?? "example",
+  });
   const payload = {
     status: "starting",
+    runName,
     updatedAt: startedAt,
     startedAt,
     endedAt: startedAt,
@@ -100,6 +109,30 @@ function writeStartingLive(config: BenchStartRequest): void {
     },
   };
   fs.writeFileSync(path.join(resultsDir, "live.json"), JSON.stringify(payload, null, 2));
+}
+
+function syncLiveFromLatestResult(): string | null {
+  const resultsDir = path.join(repoRoot, "results");
+  if (!fs.existsSync(resultsDir)) return null;
+
+  const latest = fs
+    .readdirSync(resultsDir)
+    .filter((f) => f.endsWith(".json") && f !== "live.json")
+    .sort()
+    .reverse()[0];
+  if (!latest) return null;
+
+  const results = JSON.parse(
+    fs.readFileSync(path.join(resultsDir, latest), "utf8"),
+  ) as Record<string, unknown>;
+  const live = {
+    ...results,
+    status: "complete",
+    updatedAt: new Date().toISOString(),
+    resultsFile: latest,
+  };
+  fs.writeFileSync(path.join(resultsDir, "live.json"), JSON.stringify(live, null, 2));
+  return latest;
 }
 
 export function getBenchStatus(): BenchStatus {
@@ -134,6 +167,7 @@ export function startBench(config: BenchStartRequest): { ok: true } | { ok: fals
     [
       "compose",
       "up",
+      "--build",
       "--force-recreate",
       "--abort-on-container-exit",
       "world-0",
@@ -163,7 +197,9 @@ export function startBench(config: BenchStartRequest): { ok: true } | { ok: fals
   activeProcess.on("exit", (code) => {
     activeExitCode = code;
     activeProcess = null;
-    if (code !== 0 && code !== null) {
+    if (code === 0) {
+      syncLiveFromLatestResult();
+    } else if (code !== null) {
       activeError = `Benchmark exited with code ${code}`;
       markLiveStopped(activeError);
     }

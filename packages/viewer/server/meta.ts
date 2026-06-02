@@ -18,6 +18,10 @@ export type BenchProfileMeta = {
 export type ProblemMeta = {
   id: string;
   title: string;
+  prompt: string;
+  artifacts?: string[];
+  allowShell?: boolean;
+  allowMove?: boolean;
 };
 
 export type TaskPackMeta = {
@@ -62,9 +66,26 @@ export function loadMeta(root: string): MetaResponse {
       if (!fs.statSync(path.join(packsDir, id)).isDirectory()) continue;
       if (!fs.existsSync(manifestPath)) continue;
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
-        problems: ProblemMeta[];
+        problems: Array<{
+          id: string;
+          title: string;
+          prompt: string;
+          artifacts?: string[];
+          allowShell?: boolean;
+          allowMove?: boolean;
+        }>;
       };
-      taskPacks.push({ id, problems: manifest.problems });
+      taskPacks.push({
+        id,
+        problems: manifest.problems.map((p) => ({
+          id: p.id,
+          title: p.title,
+          prompt: p.prompt,
+          artifacts: p.artifacts,
+          allowShell: p.allowShell,
+          allowMove: p.allowMove,
+        })),
+      });
     }
   }
 

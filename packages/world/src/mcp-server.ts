@@ -407,5 +407,5 @@ export async function handleMcpRequest(
   });
 
   await server.connect(transport);
-  await transport.handleRequest(req, res);
+  await transport.handleRequest(req, res, req.body);
 }
