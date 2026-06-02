@@ -5,6 +5,7 @@ import {
   buildWorldAssignments,
   buildWorldVisitOrderIds,
   formatWorldAssignments,
+  validateBenchDuration,
   validateWorldTaskCount,
 } from "../../../scripts/world-assignments.mjs";
 import { loadDotEnv } from "./meta.js";
@@ -92,6 +93,13 @@ function buildEnv(config: BenchStartRequest): Record<string, string> {
   const dotenv = loadDotEnv(repoRoot);
   const env: Record<string, string> = { ...process.env, ...dotenv } as Record<string, string>;
 
+  const problemIds = resolveSelectedProblems(merged, repoRoot);
+  const worldCount = merged.worldCount ?? problemIds.length;
+  const slotMs = merged.slotMs ?? 15000;
+  const benchDurationMs = (merged.durationSec ?? 60) * 1000;
+
+  validateBenchDuration(slotMs, benchDurationMs, worldCount);
+
   const worldAssignments = buildWorldAssignmentsForRun(merged, repoRoot);
 
   if (merged.model) env.MODEL_ID = merged.model;
@@ -101,7 +109,6 @@ function buildEnv(config: BenchStartRequest): Record<string, string> {
   }
   if (merged.benchSeed !== undefined) env.BENCH_SEED = String(merged.benchSeed);
   if (merged.taskPack) env.TASK_PACK = merged.taskPack;
-  const problemIds = resolveSelectedProblems(merged, repoRoot);
   env.PROBLEM_IDS = problemIds.join(",");
   if (merged.worldCount !== undefined) env.WORLD_COUNT = String(merged.worldCount);
   env.WORLD_ASSIGNMENTS = formatWorldAssignments(

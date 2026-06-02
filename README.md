@@ -12,7 +12,7 @@ Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **w
 
 At bench start, selected tasks are shuffled (seeded) and assigned 1:1 to worlds via `WORLD_ASSIGNMENTS`. The agent visits **each world exactly once** in a seeded visit order (`worldVisitOrder`). It **cannot choose tasks** — it must solve whichever task is assigned to the world it lands on. **`worldCount` must equal the number of selected tasks**.
 
-Each slot ends as soon as the assigned task is successfully submitted (`slotMs` is a per-slot timeout cap). **`benchDurationMs`** is an optional total wall-clock cap: if time runs out before all worlds are visited, the run stops with partial coverage.
+Each slot ends as soon as the assigned task is successfully submitted (`slotMs` is a per-slot timeout cap). **`benchDurationMs`** is the total wall-clock cap and must be at least **`slotMs × worldCount`** so every world can be visited if each slot uses its full timeout. Runs still end early when tasks are solved quickly; partial coverage only occurs if the agent is slow within individual slot caps.
 
 ## Prerequisites
 

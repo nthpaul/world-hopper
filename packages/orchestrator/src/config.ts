@@ -17,6 +17,7 @@ import {
   worldVisitOrderIds,
 } from "./world-visit-order.js";
 import { listProblems as listPackProblems } from "./task-packs.js";
+import { validateBenchDuration } from "./bench-limits.js";
 
 function parseIntEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -65,10 +66,14 @@ export function loadConfigFromEnv(): BenchConfig {
   const worldAssignments = resolveWorldAssignments(benchSeed, worlds, activeProblemIds);
   const worldVisitOrder = resolveWorldVisitOrder(benchSeed, worlds);
 
+  const slotMs = parseIntEnv("SLOT_MS", 5000);
+  const benchDurationMs = parseIntEnv("BENCH_DURATION_MS", 120_000);
+  validateBenchDuration(slotMs, benchDurationMs, worlds.length);
+
   return {
     apiKey,
-    slotMs: parseIntEnv("SLOT_MS", 5000),
-    benchDurationMs: parseIntEnv("BENCH_DURATION_MS", 120_000),
+    slotMs,
+    benchDurationMs,
     benchSeed,
     modelId: process.env.MODEL_ID ?? "composer-2.5",
     taskPack,
@@ -181,7 +186,7 @@ export function resolveBenchConfig(argv: string[]): BenchConfig {
     };
   }
 
-  return {
+  const resolved: BenchConfig = {
     ...base,
     ...overrides,
     worlds: overrides.worlds ?? base.worlds,
@@ -198,6 +203,9 @@ export function resolveBenchConfig(argv: string[]): BenchConfig {
       overrides.worlds ?? base.worlds,
     ),
   };
+
+  validateBenchDuration(resolved.slotMs, resolved.benchDurationMs, resolved.worlds.length);
+  return resolved;
 }
 
 export function printHelp(): void {

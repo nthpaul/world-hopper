@@ -11,6 +11,7 @@ import {
   buildWorldAssignments,
   formatWorldAssignments,
   resolveProblemIds,
+  validateBenchDuration,
 } from "./world-assignments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,6 +37,19 @@ if (profile.benchSeed !== undefined) env.BENCH_SEED = String(profile.benchSeed);
 if (profile.taskPack) env.TASK_PACK = profile.taskPack;
 const worldCount = profile.worldCount ?? 8;
 const problemIds = resolveProblemIds(profile, root, readFileSync, existsSync, join);
+const slotMs = profile.slotMs ?? Number.parseInt(env.SLOT_MS ?? "5000", 10);
+const benchDurationMs =
+  profile.benchDurationMs ??
+  (profile.durationSec !== undefined ? profile.durationSec * 1000 : undefined) ??
+  Number.parseInt(env.BENCH_DURATION_MS ?? "120000", 10);
+
+try {
+  validateBenchDuration(slotMs, benchDurationMs, worldCount);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+}
+
 env.PROBLEM_IDS = problemIds.join(",");
 if (profile.worldCount !== undefined) env.WORLD_COUNT = String(profile.worldCount);
 env.WORLD_ASSIGNMENTS = formatWorldAssignments(

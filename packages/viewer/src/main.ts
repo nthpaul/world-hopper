@@ -35,12 +35,12 @@ function shell() {
           <div class="form-grid">
             <label>Model<select id="model-select" name="model" required></select></label>
             <label>Max slot (ms)<input id="slot-input" name="slotMs" type="number" min="1000" step="1000" required /></label>
-            <label>Max bench time (sec)<input id="duration-input" name="durationSec" type="number" min="10" step="5" required /></label>
+            <label id="duration-label">Max bench time (sec)<input id="duration-input" name="durationSec" type="number" min="10" step="5" required /></label>
             <label>Seed<input id="seed-input" name="benchSeed" type="number" required /></label>
             <label>Task pack<select id="pack-select" name="taskPack"></select></label>
             <label>Worlds<input id="worlds-input" name="worldCount" type="number" min="1" max="8" required readonly title="Always equals the number of selected tasks" /></label>
           </div>
-          <fieldset class="problems-fieldset">
+          <fieldset id="problems-fieldset" class="problems-fieldset">
             <legend>Tasks for this run</legend>
             <div id="problems-list" class="problems-checkboxes"></div>
             <label class="checkbox-inline"><input type="checkbox" id="all-problems" checked /> All tasks in pack</label>
@@ -261,7 +261,7 @@ function fillProblemsForPack(packId: string, selected?: string[]) {
 
   for (const problem of pack.problems) {
     const label = document.createElement("label");
-    label.className = "problem-option";
+    label.className = allChecked ? "problem-option problem-option--locked" : "problem-option";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.name = "problem";
@@ -308,8 +308,10 @@ function toggleProblemCheckboxes(all: boolean) {
   for (const input of document.querySelectorAll<HTMLInputElement>("#problems-list input")) {
     input.disabled = all;
     if (all) input.checked = true;
+    input.closest(".problem-option")?.classList.toggle("problem-option--locked", all);
   }
   syncWorldCountToTasks();
+  updateDurationHint();
 }
 
 function countSelectedTasks(config: BenchStartRequest): number {
@@ -318,8 +320,29 @@ function countSelectedTasks(config: BenchStartRequest): number {
   return pack?.problems.length ?? 0;
 }
 
+function clearFieldErrors(): void {
+  document
+    .querySelectorAll("#run-form .field-error")
+    .forEach((el) => el.classList.remove("field-error"));
+}
+
+function markFieldError(field: "duration" | "tasks"): void {
+  if (field === "duration") {
+    document.getElementById("duration-label")?.classList.add("field-error");
+    document.getElementById("duration-input")?.focus();
+  } else {
+    document.getElementById("problems-fieldset")?.classList.add("field-error");
+  }
+}
+
+function minBenchTimeMessage(minSec: number): string {
+  return `Set max bench time to at least ${minSec} seconds.`;
+}
+
 function updateDurationHint(): void {
   const hint = document.getElementById("duration-hint");
+  const durationInput = document.getElementById("duration-input") as HTMLInputElement | null;
+  const durationLabel = document.getElementById("duration-label");
   if (!hint) return;
 
   const config = readFormConfig();
@@ -327,25 +350,51 @@ function updateDurationHint(): void {
   const slotMs = config.slotMs ?? meta?.defaults.slotMs ?? 15000;
   const durationMs = (config.durationSec ?? meta?.defaults.durationSec ?? 60) * 1000;
   const minDurationMs = worldCount * slotMs;
+  const minDurationSec = Math.ceil(minDurationMs / 1000);
+
+  if (durationInput) {
+    durationInput.min = String(minDurationSec);
+  }
 
   if (durationMs < minDurationMs) {
+    durationLabel?.classList.add("field-error");
     hint.hidden = false;
-    hint.textContent = `Max bench time may be too short to visit all ${worldCount} worlds (needs up to ${Math.ceil(minDurationMs / 1000)}s at max slot time).`;
+    hint.classList.add("error");
+    hint.textContent = minBenchTimeMessage(minDurationSec);
   } else {
+    durationLabel?.classList.remove("field-error");
     hint.hidden = true;
+    hint.classList.remove("error");
     hint.textContent = "";
   }
 }
 
-function validateRunConfig(config: BenchStartRequest): string | null {
+type RunConfigValidation = { error: string; field: "duration" | "tasks" };
+
+function validateRunConfig(config: BenchStartRequest): RunConfigValidation | null {
   const worldCount = config.worldCount ?? meta?.defaults.worldCount ?? 8;
   const taskCount = countSelectedTasks(config);
   if (taskCount === 0) {
-    return "Select at least one task";
+    return { error: "Select at least one task", field: "tasks" };
   }
   if (worldCount !== taskCount) {
-    return `World count must equal task count (${worldCount} worlds, ${taskCount} tasks selected)`;
+    return {
+      error: `World count must equal task count (${worldCount} worlds, ${taskCount} tasks selected)`,
+      field: "tasks",
+    };
   }
+
+  const slotMs = config.slotMs ?? meta?.defaults.slotMs ?? 15000;
+  const durationMs = (config.durationSec ?? meta?.defaults.durationSec ?? 60) * 1000;
+  const minDurationMs = worldCount * slotMs;
+  if (durationMs < minDurationMs) {
+    const minSec = Math.ceil(minDurationMs / 1000);
+    return {
+      error: minBenchTimeMessage(minSec),
+      field: "duration",
+    };
+  }
+
   return null;
 }
 
@@ -449,8 +498,17 @@ async function init() {
     toggleProblemCheckboxes(allProblems.checked);
   });
 
-  document.getElementById("problems-list")!.addEventListener("change", () => {
+  document.getElementById("problems-list")!.addEventListener("change", (e) => {
+    const allProblemsEl = document.getElementById("all-problems") as HTMLInputElement;
+    if (allProblemsEl?.checked) {
+      const target = e.target as HTMLInputElement;
+      if (target.matches("#problems-list input[type=checkbox]")) {
+        target.checked = true;
+      }
+      return;
+    }
     syncWorldCountToTasks();
+    document.getElementById("problems-fieldset")?.classList.remove("field-error");
     updateDurationHint();
   });
 
@@ -460,9 +518,12 @@ async function init() {
   runForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const config = readFormConfig();
-    const validationError = validateRunConfig(config);
-    if (validationError) {
-      alert(validationError);
+    clearFieldErrors();
+    updateDurationHint();
+    const validation = validateRunConfig(config);
+    if (validation) {
+      markFieldError(validation.field);
+      alert(validation.error);
       return;
     }
     const res = await fetch("/api/bench/start", {

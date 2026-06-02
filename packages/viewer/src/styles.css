@@ -230,6 +230,10 @@ section h2 {
   color: #8a5a20;
 }
 
+.duration-hint.error {
+  color: #9a3020;
+}
+
 .stat-denom {
   font-size: 0.85em;
   color: var(--ink-muted);
@@ -319,6 +323,21 @@ tr:last-child td {
   color: var(--ink);
 }
 
+.run-form label.field-error input,
+.run-form label.field-error select,
+.run-form select.field-error,
+.run-form input.field-error {
+  border-color: #9a3020;
+  outline: 2px solid rgba(154, 48, 32, 0.35);
+  outline-offset: 1px;
+}
+
+.problems-fieldset.field-error {
+  border-color: #9a3020;
+  outline: 2px solid rgba(154, 48, 32, 0.35);
+  outline-offset: 2px;
+}
+
 .form-row {
   margin-bottom: 1rem;
 }
@@ -363,6 +382,16 @@ tr:last-child td {
   background: var(--cream);
   border: 1px solid #ddd5c4;
   cursor: pointer;
+}
+
+.problem-option--locked {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.problem-option--locked input {
+  pointer-events: none;
 }
 
 .problem-option input {

@@ -10,6 +10,21 @@ export function validateWorldTaskCount(worldCount, problemCount) {
   }
 }
 
+export function minBenchDurationMs(slotMs, worldCount) {
+  return slotMs * worldCount;
+}
+
+export function formatMinBenchDurationMessage(minSec) {
+  return `Set max bench time to at least ${minSec} seconds.`;
+}
+
+export function validateBenchDuration(slotMs, benchDurationMs, worldCount) {
+  const minMs = minBenchDurationMs(slotMs, worldCount);
+  if (benchDurationMs >= minMs) return;
+
+  throw new Error(formatMinBenchDurationMessage(Math.ceil(minMs / 1000)));
+}
+
 export function createSeededRng(seed) {
   let state = seed >>> 0;
   return () => {
