@@ -6,5 +6,5 @@
   "benchSeed": 42,
   "taskPack": "example",
   "problems": ["math-quiz", "sum-numbers"],
-  "worldCount": 4
+  "worldCount": 2
 }

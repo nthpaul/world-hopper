@@ -13,7 +13,7 @@
     "compose:bench": "node scripts/run-compose-bench.mjs",
     "viewer": "npm run dev -w @cursor-world-hop-bench/viewer",
     "viewer:build": "npm run build -w @cursor-world-hop-bench/viewer",
-    "world:dev": "TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @cursor-world-hop-bench/world",
+    "world:dev": "WORLD_ID=0 WORLD_ASSIGNMENTS=0:math-quiz TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @cursor-world-hop-bench/world",
     "compose:build": "docker compose build",
     "compose:up": "docker compose up --abort-on-container-exit agent"
   },

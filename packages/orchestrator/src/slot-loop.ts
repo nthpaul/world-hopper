@@ -1,6 +1,7 @@
 import { Agent, CursorAgentError, type Run } from "@cursor/sdk";
 import { basename } from "node:path";
 import { buildSlotPrompt, createSeededRng, pickRandomWorld } from "./world-picker.js";
+import { getAssignedProblemId } from "./world-assignments.js";
 import { fetchWorldStatus, sleep } from "./world-client.js";
 import {
   buildAggregates,
@@ -9,9 +10,8 @@ import {
   publishLiveResults,
   writeResults,
 } from "./results.js";
-import type { BenchConfig, BenchResults, LiveCurrentSlot, SlotRecord } from "./types.js";
+import type { BenchConfig, BenchResults, LiveCurrentSlot, SlotRecord, WorldStatusSnapshot } from "./types.js";
 import { debugLog } from "./debug-log.js";
-import { listProblems } from "./task-packs.js";
 import { buildRunName } from "./run-name.js";
 import { consumeRunStreamWithLive, LiveSlotTracker } from "./live-activity.js";
 
@@ -45,6 +45,22 @@ function buildCurrentSlot(
     activity: tracker.snapshot(),
     maze: summary.maze,
   };
+}
+
+function isAssignedTaskSolved(
+  assignedProblemId: string,
+  beforeIds: string[],
+  status: WorldStatusSnapshot | undefined,
+  tracker: LiveSlotTracker,
+): boolean {
+  if (
+    status?.solvedIds.includes(assignedProblemId) &&
+    !beforeIds.includes(assignedProblemId)
+  ) {
+    return true;
+  }
+  const summary = tracker.summary();
+  return summary.lastSuccessfulSubmit?.problemId === assignedProblemId;
 }
 
 export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
@@ -103,8 +119,6 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
       aggregates,
     });
 
-    const activeProblems =
-      config.problemIds ?? listProblems(config.taskPack).map((p) => p.id);
     const benchDeadline = Date.now() + config.benchDurationMs;
     let slotIndex = 0;
 
@@ -137,13 +151,17 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
 
       const before = await fetchWorldStatus(world.statusUrl);
 
-      console.log(`[slot ${slotIndex}] connected to world-${world.id} (${config.slotMs}ms)`);
+      const assignedProblemId = getAssignedProblemId(config.worldAssignments, world.id);
+
+      console.log(
+        `[slot ${slotIndex}] connected to world-${world.id} task=${assignedProblemId} (${config.slotMs}ms)`,
+      );
 
       const prompt = buildSlotPrompt(
         world,
         config.slotMs,
         slotIndex,
-        activeProblems,
+        assignedProblemId,
       );
       currentRun = await agent.send(prompt, {
         mcpServers: {
@@ -182,18 +200,34 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
 
       const slotDeadline = Date.now() + config.slotMs;
       let lastWorldPoll = 0;
+      let lastPolledStatus: WorldStatusSnapshot | undefined;
+      let slotExitReason: "solved" | "timeout" = "timeout";
+
       while (Date.now() < slotDeadline) {
         const now = Date.now();
         if (now - lastWorldPoll >= WORLD_POLL_MS) {
           lastWorldPoll = now;
           try {
-            const status = await fetchWorldStatus(world.statusUrl);
-            slotTracker.mergeWorldMazes(status);
+            lastPolledStatus = await fetchWorldStatus(world.statusUrl);
+            slotTracker.mergeWorldMazes(lastPolledStatus);
             publishSlotLive(true);
           } catch {
             /* ignore transient world poll errors */
           }
         }
+
+        if (
+          isAssignedTaskSolved(
+            assignedProblemId,
+            before.solvedIds,
+            lastPolledStatus,
+            slotTracker,
+          )
+        ) {
+          slotExitReason = "solved";
+          break;
+        }
+
         await sleep(Math.min(250, slotDeadline - Date.now()));
       }
 
@@ -202,6 +236,13 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         (await streamTask) ?? slotTracker.summary();
       const after = await fetchWorldStatus(world.statusUrl);
       slotTracker.mergeWorldMazes(after);
+
+      if (
+        slotExitReason !== "solved" &&
+        isAssignedTaskSolved(assignedProblemId, before.solvedIds, after, slotTracker)
+      ) {
+        slotExitReason = "solved";
+      }
 
       const submitCalls = streamResult.toolNames.filter((n) => /submit/i.test(n));
       debugLog("slot-loop.ts:slot-end", "slot completed", "H1,H3,H4", {
@@ -217,12 +258,19 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         runStatus: cancelInfo.status,
         activityCount: streamResult.activityCount,
         lastProblemId: streamResult.lastProblemId,
+        exitReason: slotExitReason,
       });
-      console.log(
-        `[slot ${slotIndex}] done world-${world.id} delta=${after.solvedCount - before.solvedCount} tools=${streamResult.mcpToolCalls} submit=${submitCalls.length}`,
-      );
 
       const slotEnded = new Date();
+      const solveDurationMs = slotEnded.getTime() - slotStarted.getTime();
+      const solvedEarly = slotExitReason === "solved";
+
+      console.log(
+        solvedEarly
+          ? `[slot ${slotIndex}] solved early in ${(solveDurationMs / 1000).toFixed(1)}s (cap ${config.slotMs / 1000}s) world-${world.id}`
+          : `[slot ${slotIndex}] done world-${world.id} delta=${after.solvedCount - before.solvedCount} tools=${streamResult.mcpToolCalls} submit=${submitCalls.length}`,
+      );
+
       slots.push({
         slotIndex,
         worldId: world.id,
@@ -238,6 +286,8 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         activityCount: streamResult.activityCount,
         lastProblemId: streamResult.lastProblemId,
         maze: streamResult.maze,
+        exitReason: slotExitReason,
+        solveDurationMs,
       });
 
       aggregates = buildAggregates(slots);

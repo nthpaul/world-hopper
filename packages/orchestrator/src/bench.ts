@@ -44,6 +44,7 @@ async function main(): Promise<void> {
         taskPack: config.taskPack,
         problems: activeProblems,
         worlds: config.worlds.length,
+        worldAssignments: config.worldAssignments,
       },
       null,
       2,

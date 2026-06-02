@@ -48,7 +48,17 @@ export function renderLiveAttempt(
 
   const elapsedMs = Date.now() - new Date(slot.startedAt).getTime();
   const slotMs = data.config.slotMs;
-  const progress = Math.min(100, Math.max(0, (elapsedMs / slotMs) * 100));
+  const assignedProblemId = data.config.worldAssignments?.[slot.worldId];
+  const solvedLive =
+    assignedProblemId !== undefined &&
+    slot.maze?.problemId === assignedProblemId &&
+    slot.maze.lastSubmit?.ok === true;
+  const progress = solvedLive
+    ? 100
+    : Math.min(100, Math.max(0, (elapsedMs / slotMs) * 100));
+  const timingLabel = solvedLive
+    ? `Solved in <span class="num">${Math.max(0, elapsedMs / 1000).toFixed(1)}</span>s`
+    : `<span class="num">${Math.max(0, elapsedMs / 1000).toFixed(1)}</span>s / <span class="num">${(slotMs / 1000).toFixed(0)}</span>s max`;
 
   const activity = slot.activity ?? [];
   const activityHtml =
@@ -83,9 +93,9 @@ export function renderLiveAttempt(
       <div class="live-attempt-meta">
         Slot <span class="num">${slot.slotIndex}</span> ·
         world-<span class="num">${slot.worldId}</span> ·
-        ${Math.max(0, elapsedMs / 1000).toFixed(1)}s / ${(slotMs / 1000).toFixed(0)}s
+        ${timingLabel}
       </div>
-      <div class="slot-progress" aria-hidden="true">
+      <div class="slot-progress${solvedLive ? " slot-progress-solved" : ""}" aria-hidden="true">
         <div class="slot-progress-bar" style="width:${progress.toFixed(1)}%"></div>
       </div>
       <div class="live-panels">

@@ -18,11 +18,40 @@ function resolvePackPath(taskPackPath: string): string {
   return resolve(repoRoot, taskPackPath);
 }
 
-function parseProblemFilter(): string[] | undefined {
-  const raw = process.env.PROBLEM_IDS;
-  if (!raw?.trim()) return undefined;
-  const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  return ids.length > 0 ? ids : undefined;
+function parseWorldAssignments(raw: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const colon = trimmed.indexOf(":");
+    if (colon <= 0) {
+      throw new Error(`Invalid WORLD_ASSIGNMENTS entry: ${trimmed}`);
+    }
+    const worldId = trimmed.slice(0, colon);
+    const problemId = trimmed.slice(colon + 1);
+    if (!worldId || !problemId) {
+      throw new Error(`Invalid WORLD_ASSIGNMENTS entry: ${trimmed}`);
+    }
+    map.set(worldId, problemId);
+  }
+  return map;
+}
+
+function getAssignedProblemIdForWorld(): string {
+  const worldId = process.env.WORLD_ID;
+  const raw = process.env.WORLD_ASSIGNMENTS;
+  if (!worldId) {
+    throw new Error("WORLD_ID is required");
+  }
+  if (!raw?.trim()) {
+    throw new Error("WORLD_ASSIGNMENTS is required (one unique task per world)");
+  }
+  const assignments = parseWorldAssignments(raw);
+  const problemId = assignments.get(worldId);
+  if (!problemId) {
+    throw new Error(`World ${worldId} has no task in WORLD_ASSIGNMENTS`);
+  }
+  return problemId;
 }
 
 export function loadTaskPack(taskPackPath: string, worldRoot: string): LoadedTaskPack {
@@ -33,24 +62,14 @@ export function loadTaskPack(taskPackPath: string, worldRoot: string): LoadedTas
   }
 
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as TaskPackManifest;
-  const filter = parseProblemFilter();
-  const filteredProblems =
-    filter !== undefined
-      ? manifest.problems.filter((p) => filter.includes(p.id))
-      : manifest.problems;
-
-  if (filter !== undefined && filteredProblems.length === 0) {
+  const assignedProblemId = getAssignedProblemIdForWorld();
+  const assigned = manifest.problems.find((p) => p.id === assignedProblemId);
+  if (!assigned) {
     throw new Error(
-      `PROBLEM_IDS [${filter.join(", ")}] matched no problems in pack "${manifest.packId}"`,
+      `Assigned problem "${assignedProblemId}" not found in pack "${manifest.packId}"`,
     );
   }
-
-  if (filter !== undefined) {
-    const missing = filter.filter((id) => !manifest.problems.some((p) => p.id === id));
-    if (missing.length > 0) {
-      throw new Error(`Unknown problem ids in PROBLEM_IDS: ${missing.join(", ")}`);
-    }
-  }
+  const filteredProblems = [assigned];
 
   mkdirSync(worldRoot, { recursive: true });
 

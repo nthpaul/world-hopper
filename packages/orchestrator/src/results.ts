@@ -57,6 +57,7 @@ export function buildResultsConfig(config: BenchConfig): BenchResults["config"] 
     worldCount: config.worlds.length,
     taskPack: config.taskPack,
     problemIds: config.problemIds ?? listProblems(config.taskPack).map((p) => p.id),
+    worldAssignments: config.worldAssignments,
     profileName: config.profileName,
   };
 }

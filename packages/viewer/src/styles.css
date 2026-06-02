@@ -196,6 +196,12 @@ section h2 {
   color: var(--ink-muted);
 }
 
+.world-cell-assigned {
+  font-size: 0.75rem;
+  color: var(--ink);
+  margin: 0.25rem 0;
+}
+
 .world-cell-visits {
   font-size: 1.25rem;
 }
@@ -629,6 +635,15 @@ tr:last-child td {
   height: 100%;
   background: #3d6b4f;
   transition: width 0.3s ease;
+}
+
+.slot-progress-solved .slot-progress-bar {
+  background: #2d8a52;
+}
+
+.slot-duration-solved {
+  color: #2d6a3f;
+  font-weight: 600;
 }
 
 .live-panels {

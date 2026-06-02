@@ -6,6 +6,7 @@ export type BenchConfig = {
   modelId: string;
   taskPack: string;
   problemIds?: string[];
+  worldAssignments: Record<string, string>;
   agentStubCwd: string;
   resultsDir: string;
   sandboxEnabled: boolean;
@@ -72,6 +73,8 @@ export type SlotRecord = {
   activityCount?: number;
   lastProblemId?: string;
   maze?: LiveMazeState;
+  exitReason?: "solved" | "timeout";
+  solveDurationMs?: number;
 };
 
 export type BenchRunStatus = "starting" | "running" | "complete" | "failed" | "stopped";
@@ -88,6 +91,7 @@ export type BenchResults = {
     worldCount: number;
     taskPack: string;
     problemIds?: string[];
+    worldAssignments?: Record<string, string>;
     profileName?: string;
   };
   agentId: string;

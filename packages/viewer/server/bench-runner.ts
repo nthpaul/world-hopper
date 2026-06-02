@@ -1,6 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import {
+  buildWorldAssignments,
+  formatWorldAssignments,
+  validateWorldTaskCount,
+} from "../../../scripts/world-assignments.mjs";
 import { loadDotEnv } from "./meta.js";
 import { buildRunName } from "./run-name.js";
 
@@ -35,6 +40,37 @@ export function initBenchRunner(root: string): void {
   repoRoot = root;
 }
 
+function resolveSelectedProblems(merged: BenchStartRequest, repoRoot: string): string[] {
+  if (merged.problems?.length) return merged.problems;
+
+  const packId = merged.taskPack ?? "example";
+  const manifestPath = path.join(repoRoot, "task-packs", packId, "manifest.json");
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Task pack not found: ${packId}`);
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
+    problems: Array<{ id: string }>;
+  };
+  return manifest.problems.map((p) => p.id);
+}
+
+function buildWorldAssignmentsForRun(
+  merged: BenchStartRequest,
+  repoRoot: string,
+): Record<string, string> {
+  const worldCount = merged.worldCount ?? 8;
+  const problemIds = resolveSelectedProblems(merged, repoRoot);
+  validateWorldTaskCount(worldCount, problemIds.length);
+  const assignments = buildWorldAssignments({
+    seed: merged.benchSeed ?? 42,
+    worldCount,
+    problemIds,
+  });
+  return Object.fromEntries(
+    Object.entries(assignments).map(([worldId, problemId]) => [String(worldId), problemId]),
+  );
+}
+
 function mergeProfile(config: BenchStartRequest): BenchStartRequest {
   if (!config.profile) return config;
   const profilePath = path.join(
@@ -55,6 +91,8 @@ function buildEnv(config: BenchStartRequest): Record<string, string> {
   const dotenv = loadDotEnv(repoRoot);
   const env: Record<string, string> = { ...process.env, ...dotenv } as Record<string, string>;
 
+  const worldAssignments = buildWorldAssignmentsForRun(merged, repoRoot);
+
   if (merged.model) env.MODEL_ID = merged.model;
   if (merged.slotMs !== undefined) env.SLOT_MS = String(merged.slotMs);
   if (merged.durationSec !== undefined) {
@@ -62,9 +100,17 @@ function buildEnv(config: BenchStartRequest): Record<string, string> {
   }
   if (merged.benchSeed !== undefined) env.BENCH_SEED = String(merged.benchSeed);
   if (merged.taskPack) env.TASK_PACK = merged.taskPack;
-  if (merged.problems?.length) env.PROBLEM_IDS = merged.problems.join(",");
-  else env.PROBLEM_IDS = "";
+  const problemIds = resolveSelectedProblems(merged, repoRoot);
+  env.PROBLEM_IDS = problemIds.join(",");
   if (merged.worldCount !== undefined) env.WORLD_COUNT = String(merged.worldCount);
+  env.WORLD_ASSIGNMENTS = formatWorldAssignments(
+    Object.fromEntries(
+      Object.entries(worldAssignments).map(([worldId, problemId]) => [
+        Number(worldId),
+        problemId,
+      ]),
+    ),
+  );
   env.BENCH_PROFILE = merged.name ?? merged.profile ?? "custom";
 
   return env;
@@ -76,6 +122,8 @@ function writeStartingLive(config: BenchStartRequest): void {
   const startedAt = new Date().toISOString();
   const merged = mergeProfile(config);
   const durationMs = (merged.durationSec ?? 60) * 1000;
+  const worldAssignments = buildWorldAssignmentsForRun(merged, repoRoot);
+  const problemIds = resolveSelectedProblems(merged, repoRoot);
   const runName = buildRunName({
     modelId: merged.model ?? "composer-2.5",
     benchDurationMs: durationMs,
@@ -96,7 +144,8 @@ function writeStartingLive(config: BenchStartRequest): void {
       modelId: merged.model ?? "composer-2.5",
       worldCount: merged.worldCount ?? 8,
       taskPack: merged.taskPack ?? "example",
-      problemIds: merged.problems,
+      problemIds,
+      worldAssignments,
       profileName: merged.name ?? merged.profile,
     },
     agentId: "",
@@ -151,7 +200,16 @@ export function startBench(config: BenchStartRequest): { ok: true } | { ok: fals
     return { ok: false, error: "A benchmark is already running" };
   }
 
-  const env = buildEnv(config);
+  let env: Record<string, string>;
+  try {
+    env = buildEnv(config);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+
   if (!env.CURSOR_API_KEY) {
     return { ok: false, error: "CURSOR_API_KEY not found in .env" };
   }
@@ -162,6 +220,9 @@ export function startBench(config: BenchStartRequest): { ok: true } | { ok: fals
   activeError = null;
   writeStartingLive(activeConfig);
 
+  const worldCount = activeConfig.worldCount ?? 8;
+  const worldServices = Array.from({ length: worldCount }, (_, i) => `world-${i}`);
+
   activeProcess = spawn(
     "docker",
     [
@@ -170,14 +231,7 @@ export function startBench(config: BenchStartRequest): { ok: true } | { ok: fals
       "--build",
       "--force-recreate",
       "--abort-on-container-exit",
-      "world-0",
-      "world-1",
-      "world-2",
-      "world-3",
-      "world-4",
-      "world-5",
-      "world-6",
-      "world-7",
+      ...worldServices,
       "agent",
     ],
     {

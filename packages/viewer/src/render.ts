@@ -92,10 +92,18 @@ export function renderResults(
         const prob = problems.find((p) => p.id === pid);
         return prob ? `${prob.title} (${pid})` : pid;
       });
+      const assigned = config.worldAssignments?.[id];
+      const assignedLabel = assigned
+        ? (() => {
+            const prob = problems.find((p) => p.id === assigned);
+            return prob ? `${prob.title} (${assigned})` : assigned;
+          })()
+        : "";
       const isActive = data.currentSlot?.worldId === id;
       return `<div class="world-cell${isActive ? " world-cell-active" : ""}">
         <div class="world-cell-id">world-<span class="num">${id}</span></div>
-        <div class="world-cell-visits num">${visits}</div>
+        <div class="world-cell-assigned">${assignedLabel || "—"}</div>
+        <div class="world-cell-visits num">${visits} visit${visits === 1 ? "" : "s"}</div>
         <div class="world-cell-solved">${solvedLabels.length ? solvedLabels.join("; ") : "—"}</div>
       </div>`;
     })
@@ -106,14 +114,15 @@ export function renderResults(
       const deltaClass = s.solvedDelta > 0 ? "delta-pos" : "delta-zero";
       const statusClass =
         s.runStatus === "cancelled" ? "status-cancelled" : "status-finished";
-      const durSec = (
-        (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) /
-        1000
-      ).toFixed(1);
+      const durMs = s.solveDurationMs ?? new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime();
+      const durSec = (durMs / 1000).toFixed(1);
+      const durationClass = s.exitReason === "solved" ? "slot-duration-solved" : "";
+      const exitLabel = s.exitReason === "solved" ? "solved" : s.exitReason === "timeout" ? "timeout" : "—";
       return `<tr>
         <td class="num">${s.slotIndex}</td>
         <td>world-<span class="num">${s.worldId}</span></td>
-        <td><span class="num">${durSec}</span>s</td>
+        <td class="${durationClass}"><span class="num">${durSec}</span>s</td>
+        <td>${exitLabel}</td>
         <td class="${deltaClass} num">${s.solvedDelta}</td>
         <td class="num">${s.mcpToolCalls ?? "—"}</td>
         <td class="num">${s.assistantChars ?? "—"}</td>
@@ -122,10 +131,42 @@ export function renderResults(
     })
     .join("");
 
+  const solvedSlots = slots.filter((s) => s.exitReason === "solved");
+  const avgSolveMs =
+    solvedSlots.length > 0
+      ? solvedSlots.reduce(
+          (sum, s) =>
+            sum + (s.solveDurationMs ?? new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()),
+          0,
+        ) / solvedSlots.length
+      : null;
+
   const problemsHtml = renderProblemsRunSummary(
     problems,
     aggregates.uniqueSolvedByWorld ?? {},
   );
+
+  const assignmentRows = config.worldAssignments
+    ? Object.entries(config.worldAssignments)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([worldId, problemId]) => {
+          const prob = problems.find((p) => p.id === problemId);
+          const label = prob ? `${prob.title} (<code>${problemId}</code>)` : `<code>${problemId}</code>`;
+          return `<tr><td>world-<span class="num">${worldId}</span></td><td>${label}</td></tr>`;
+        })
+        .join("")
+    : "";
+
+  const assignmentsHtml = assignmentRows
+    ? `<section>
+      <h2>World → task assignments</h2>
+      <p class="pack-tasks-intro">Each world hosts exactly one unique task for this run. The agent is assigned the task for whichever world it hops to.</p>
+      <table>
+        <thead><tr><th>World</th><th>Task</th></tr></thead>
+        <tbody>${assignmentRows}</tbody>
+      </table>
+    </section>`
+    : "";
 
   const endedRow =
     isLive ?
@@ -161,9 +202,17 @@ export function renderResults(
         <div class="stat-value">${fmtDuration(runMs)}</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Slot length</div>
+        <div class="stat-label">Max slot time</div>
         <div class="stat-value">${fmtDuration(config.slotMs)}</div>
       </div>
+      ${
+        avgSolveMs !== null
+          ? `<div class="stat">
+        <div class="stat-label">Avg solve time</div>
+        <div class="stat-value">${fmtDuration(avgSolveMs)}</div>
+      </div>`
+          : ""
+      }
       <div class="stat">
         <div class="stat-label">Worlds</div>
         <div class="stat-value num">${config.worldCount}</div>
@@ -185,6 +234,8 @@ export function renderResults(
       ${problemsHtml}
     </section>
 
+    ${assignmentsHtml}
+
     <section>
       <h2>World timeline</h2>
       <div class="timeline">${timeline || "<em>No slots yet</em>"}</div>
@@ -204,13 +255,14 @@ export function renderResults(
             <th>#</th>
             <th>World</th>
             <th>Duration</th>
+            <th>Exit</th>
             <th>Solved Δ</th>
             <th>MCP calls</th>
             <th>Chars</th>
             <th>Status</th>
           </tr>
         </thead>
-        <tbody>${slotRows || `<tr><td colspan="7" class="empty-row">No completed slots yet</td></tr>`}</tbody>
+        <tbody>${slotRows || `<tr><td colspan="8" class="empty-row">No completed slots yet</td></tr>`}</tbody>
       </table>
     </section>
   `;

@@ -10,6 +10,7 @@ x-world-common: &world-common
   environment: &world-env
     TASK_PACK_PATH: /task-packs/${TASK_PACK:-example}
     PROBLEM_IDS: ${PROBLEM_IDS:-}
+    WORLD_ASSIGNMENTS: ${WORLD_ASSIGNMENTS:-}
     WORLD_ROOT: /world
     PORT: "3100"
     DEBUG_LOG_PATH: /app/.cursor-debug/debug-afd95d.log
@@ -23,15 +24,6 @@ services:
       - .env
     networks:
       - bench
-    depends_on:
-      - world-0
-      - world-1
-      - world-2
-      - world-3
-      - world-4
-      - world-5
-      - world-6
-      - world-7
     environment:
       CURSOR_API_KEY: ${CURSOR_API_KEY:-}
       SLOT_MS: ${SLOT_MS:-5000}
@@ -41,6 +33,7 @@ services:
       MODEL_ID: ${MODEL_ID:-composer-2.5}
       TASK_PACK: ${TASK_PACK:-example}
       PROBLEM_IDS: ${PROBLEM_IDS:-}
+      WORLD_ASSIGNMENTS: ${WORLD_ASSIGNMENTS:-}
       BENCH_CONFIG: ${BENCH_CONFIG:-}
       BENCH_PROFILE: ${BENCH_PROFILE:-}
       AGENT_STUB_CWD: /app/agent-stub

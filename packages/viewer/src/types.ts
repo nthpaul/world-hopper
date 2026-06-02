@@ -47,6 +47,7 @@ export type BenchResults = {
     worldCount: number;
     taskPack?: string;
     problemIds?: string[];
+    worldAssignments?: Record<string, string>;
     profileName?: string;
   };
   agentId: string;
@@ -65,6 +66,8 @@ export type BenchResults = {
     activityCount?: number;
     lastProblemId?: string;
     maze?: LiveMazeState;
+    exitReason?: "solved" | "timeout";
+    solveDurationMs?: number;
   }>;
   aggregates: {
     totalSlots: number;

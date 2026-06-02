@@ -5,8 +5,10 @@ Eval-style harness: one durable Cursor SDK agent hops randomly between isolated 
 ## Architecture
 
 - **Agent container** — orchestrator + `@cursor/sdk` local agent (stub `cwd`, real work via MCP)
-- **World containers** (`world-0` … `world-7`) — task pack + HTTP MCP tools + verifiers
+- **World containers** (`world-0` … `world-N`) — each hosts **one unique task** for the run
 - **Task packs** — pluggable JSON manifests under `task-packs/`
+
+At bench start, selected tasks are shuffled (seeded) and assigned 1:1 to worlds via `WORLD_ASSIGNMENTS`. The agent hops randomly between worlds each slot but **cannot choose tasks** — it must solve whichever task is assigned to the world it lands on. **`worldCount` must equal the number of selected tasks** — each world hosts exactly one task, and every selected task is used.
 
 ## Prerequisites
 
@@ -22,14 +24,16 @@ Copy the example env file and add your key:
 cp .env.example .env   # edit CURSOR_API_KEY
 npm install
 docker compose build
-docker compose up --abort-on-container-exit agent
+npm run compose:bench -- configs/quick.json
 ```
+
+Or use the viewer (`npm run viewer`) to configure and start runs — it computes `WORLD_ASSIGNMENTS` automatically.
 
 Or export the key directly (`.env` is gitignored):
 
 ```bash
 export CURSOR_API_KEY=cursor_...
-docker compose up --abort-on-container-exit agent
+npm run compose:bench -- configs/quick.json
 ```
 
 Results land in `./results/<timestamp>.json`.
@@ -84,7 +88,7 @@ npm run bench -- \
   --pack example
 ```
 
-When using Docker, `TASK_PACK` and `PROBLEM_IDS` must match on **both** agent and world containers (use `compose:bench` or set them in `.env`).
+When using Docker, `TASK_PACK`, `PROBLEM_IDS`, and `WORLD_ASSIGNMENTS` must match on **both** agent and world containers (use `compose:bench` or the viewer dashboard — assignments are computed automatically).
 
 ### Maze world (`task-packs/maze`)
 
@@ -103,7 +107,7 @@ npm run compose:bench -- configs/maze.json
 Local maze world:
 
 ```bash
-TASK_PACK=maze npm run world:dev
+TASK_PACK=maze WORLD_ID=0 WORLD_ASSIGNMENTS=0:maze-easy npm run world:dev
 ```
 
 ## Local dev (single world)
@@ -133,13 +137,14 @@ npm run bench -- \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CURSOR_API_KEY` | — | Required SDK API key |
-| `SLOT_MS` | `5000` | Seconds per world slot |
+| `SLOT_MS` | `5000` | Max time per world slot (timeout cap); slots end early on successful submit |
 | `BENCH_DURATION_MS` | `120000` | Total benchmark duration |
 | `BENCH_SEED` | `42` | RNG seed for world selection |
 | `WORLD_COUNT` | `8` | Used when `WORLD_URLS` unset |
 | `MODEL_ID` | `composer-2.5` | SDK model id |
 | `TASK_PACK` | `example` | Pack id under `task-packs/` |
 | `PROBLEM_IDS` | — | Comma-separated problem ids (default: all in pack) |
+| `WORLD_ASSIGNMENTS` | — | Comma-separated `worldId:problemId` pairs (auto-set by viewer / `compose:bench`) |
 | `BENCH_CONFIG` | — | Path to bench profile JSON (optional) |
 
 Override world URLs (comma-separated MCP base URLs):
@@ -179,7 +184,9 @@ Orchestrator scores via `GET /status` on each world.
 
 ## Results JSON
 
-Each run records per-slot metrics (`worldId`, `solvedDelta`, `runId`, `assistantChars`) and aggregates (`totalSolvedDelta`, `perWorldVisitCount`, `uniqueSolvedByWorld`).
+Each run records per-slot metrics (`worldId`, `solvedDelta`, `solveDurationMs`, `exitReason`, `runId`, `assistantChars`) and aggregates (`totalSolvedDelta`, `perWorldVisitCount`, `uniqueSolvedByWorld`).
+
+Slots end as soon as the assigned task is successfully submitted; failed submits may retry until the slot timeout (`SLOT_MS`).
 
 ## Security
 

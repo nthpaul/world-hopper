@@ -7,6 +7,11 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import {
+  buildWorldAssignments,
+  formatWorldAssignments,
+  resolveProblemIds,
+} from "./world-assignments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = process.argv[2] ?? "configs/quick.json";
@@ -29,8 +34,17 @@ if (profile.benchDurationMs !== undefined) {
 }
 if (profile.benchSeed !== undefined) env.BENCH_SEED = String(profile.benchSeed);
 if (profile.taskPack) env.TASK_PACK = profile.taskPack;
-if (profile.problems?.length) env.PROBLEM_IDS = profile.problems.join(",");
+const worldCount = profile.worldCount ?? 8;
+const problemIds = resolveProblemIds(profile, root, readFileSync, existsSync, join);
+env.PROBLEM_IDS = problemIds.join(",");
 if (profile.worldCount !== undefined) env.WORLD_COUNT = String(profile.worldCount);
+env.WORLD_ASSIGNMENTS = formatWorldAssignments(
+  buildWorldAssignments({
+    seed: profile.benchSeed ?? 42,
+    worldCount,
+    problemIds,
+  }),
+);
 env.BENCH_PROFILE = profile.name ?? configPath;
 
 console.log("Running bench profile:", env.BENCH_PROFILE);
@@ -43,15 +57,18 @@ console.log(
       taskPack: env.TASK_PACK,
       problems: env.PROBLEM_IDS ?? "(all)",
       worldCount: env.WORLD_COUNT,
+      worldAssignments: env.WORLD_ASSIGNMENTS,
     },
     null,
     2,
   ),
 );
 
+const worldServices = Array.from({ length: worldCount }, (_, i) => `world-${i}`);
+
 const result = spawnSync(
   "docker",
-  ["compose", "up", "--abort-on-container-exit", "agent"],
+  ["compose", "up", "--abort-on-container-exit", ...worldServices, "agent"],
   { stdio: "inherit", env, cwd: root },
 );
 

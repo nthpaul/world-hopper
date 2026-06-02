@@ -7,6 +7,12 @@ import {
   profileToConfigOverrides,
 } from "./bench-config.js";
 import { buildWorldEndpoints } from "./world-endpoints.js";
+import {
+  buildWorldAssignments,
+  parseWorldAssignments,
+  toStringKeyAssignments,
+} from "./world-assignments.js";
+import { listProblems as listPackProblems } from "./task-packs.js";
 
 function parseIntEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -17,6 +23,24 @@ function parseIntEnv(name: string, fallback: number): number {
 
 export type ResolvedBenchConfig = BenchConfig;
 
+function resolveWorldAssignments(
+  benchSeed: number,
+  worlds: WorldEndpoint[],
+  problemIds: string[],
+): Record<string, string> {
+  const parsed = parseWorldAssignments(process.env.WORLD_ASSIGNMENTS);
+  if (parsed) {
+    return toStringKeyAssignments(parsed);
+  }
+
+  const built = buildWorldAssignments({
+    seed: benchSeed,
+    worldCount: worlds.length,
+    problemIds,
+  });
+  return toStringKeyAssignments(built);
+}
+
 export function loadConfigFromEnv(): BenchConfig {
   const apiKey = process.env.CURSOR_API_KEY;
   if (!apiKey) {
@@ -26,15 +50,21 @@ export function loadConfigFromEnv(): BenchConfig {
   const worldCount = parseIntEnv("WORLD_COUNT", 8);
   const worlds = buildWorldEndpoints(worldCount, process.env.WORLD_URLS);
   const problemIds = parseProblemIds(process.env.PROBLEM_IDS);
+  const benchSeed = parseIntEnv("BENCH_SEED", Date.now());
+  const taskPack = process.env.TASK_PACK ?? "example";
+  const activeProblemIds =
+    problemIds ?? listPackProblems(taskPack).map((p) => p.id);
+  const worldAssignments = resolveWorldAssignments(benchSeed, worlds, activeProblemIds);
 
   return {
     apiKey,
     slotMs: parseIntEnv("SLOT_MS", 5000),
     benchDurationMs: parseIntEnv("BENCH_DURATION_MS", 120_000),
-    benchSeed: parseIntEnv("BENCH_SEED", Date.now()),
+    benchSeed,
     modelId: process.env.MODEL_ID ?? "composer-2.5",
-    taskPack: process.env.TASK_PACK ?? "example",
+    taskPack,
     problemIds,
+    worldAssignments,
     agentStubCwd: process.env.AGENT_STUB_CWD ?? "/app/agent-stub",
     resultsDir: process.env.RESULTS_DIR ?? "/app/results",
     sandboxEnabled: process.env.LOCAL_SANDBOX_ENABLED === "true",
@@ -147,6 +177,12 @@ export function resolveBenchConfig(argv: string[]): BenchConfig {
     worlds: overrides.worlds ?? base.worlds,
     problemIds: overrides.problemIds ?? base.problemIds,
     taskPack: overrides.taskPack ?? base.taskPack,
+    worldAssignments: resolveWorldAssignments(
+      overrides.benchSeed ?? base.benchSeed,
+      overrides.worlds ?? base.worlds,
+      (overrides.problemIds ?? base.problemIds) ??
+        listPackProblems(overrides.taskPack ?? base.taskPack).map((p) => p.id),
+    ),
   };
 }
 
@@ -159,7 +195,7 @@ Usage:
 Options:
   --config <path>       Load bench profile JSON (model, slotMs, duration, pack, problems)
   --model <id>            SDK model id (default: composer-2.5)
-  --slot-ms <ms>          Time per world slot (default: 5000)
+  --slot-ms <ms>          Max time per world slot; ends early on successful submit (default: 5000)
   --duration <sec>        Total benchmark duration in seconds
   --pack <name>           Task pack under task-packs/ (default: example)
   --problems <ids>        Comma-separated problem ids to enable (default: all in pack)
@@ -172,7 +208,7 @@ Options:
 Environment:
   CURSOR_API_KEY          Required
   BENCH_CONFIG            Path to bench profile JSON (alternative to --config)
-  TASK_PACK, PROBLEM_IDS  Must match world containers when using Docker
+  TASK_PACK, PROBLEM_IDS, WORLD_ASSIGNMENTS  Must match world containers when using Docker
   SLOT_MS, BENCH_DURATION_MS, MODEL_ID, WORLD_COUNT
 
 Examples:

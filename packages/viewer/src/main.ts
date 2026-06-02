@@ -40,11 +40,11 @@ function shell() {
           </div>
           <div class="form-grid">
             <label>Model<select id="model-select" name="model" required></select></label>
-            <label>Slot (ms)<input id="slot-input" name="slotMs" type="number" min="1000" step="1000" required /></label>
+            <label>Max slot (ms)<input id="slot-input" name="slotMs" type="number" min="1000" step="1000" required /></label>
             <label>Duration (sec)<input id="duration-input" name="durationSec" type="number" min="10" step="5" required /></label>
             <label>Seed<input id="seed-input" name="benchSeed" type="number" required /></label>
             <label>Task pack<select id="pack-select" name="taskPack"></select></label>
-            <label>Worlds<input id="worlds-input" name="worldCount" type="number" min="1" max="8" required /></label>
+            <label>Worlds<input id="worlds-input" name="worldCount" type="number" min="1" max="8" required readonly title="Always equals the number of selected tasks" /></label>
           </div>
           <fieldset class="problems-fieldset">
             <legend>Tasks for this run</legend>
@@ -247,7 +247,7 @@ function renderPackReference(packId: string) {
   const pack = meta.taskPacks.find((p) => p.id === packId);
   el.innerHTML = `
     <h3>Task pack: ${packId}</h3>
-    <p class="pack-tasks-intro">Each world container loads these tasks. The agent must read files and call <code>submit</code> to score.</p>
+    <p class="pack-tasks-intro">Each world hosts one unique task per run. World count always equals the number of selected tasks.</p>
     ${renderProblemsReference(pack?.problems ?? [])}
   `;
 }
@@ -284,6 +284,25 @@ function fillProblemsForPack(packId: string, selected?: string[]) {
   }
 
   renderPackReference(packId);
+  syncWorldCountToTasks();
+}
+
+function syncWorldCountToTasks(): void {
+  const worldsInput = document.getElementById("worlds-input") as HTMLInputElement | null;
+  const packSelect = document.getElementById("pack-select") as HTMLSelectElement | null;
+  const allProblems = document.getElementById("all-problems") as HTMLInputElement | null;
+  if (!worldsInput || !packSelect || !allProblems || !meta) return;
+
+  const pack = meta.taskPacks.find((p) => p.id === packSelect.value);
+  if (!pack) return;
+
+  const count = allProblems.checked
+    ? pack.problems.length
+    : [...document.querySelectorAll<HTMLInputElement>("#problems-list input:checked")].length;
+
+  if (count > 0) {
+    worldsInput.value = String(Math.min(count, 8));
+  }
 }
 
 function applyProfile(profileId: string) {
@@ -313,6 +332,7 @@ function applyProfile(profileId: string) {
   allProblems.checked = !profile.problems?.length;
   fillProblemsForPack(profile.taskPack ?? meta.defaults.taskPack, profile.problems);
   toggleProblemCheckboxes(allProblems.checked);
+  syncWorldCountToTasks();
 }
 
 function toggleProblemCheckboxes(all: boolean) {
@@ -320,6 +340,25 @@ function toggleProblemCheckboxes(all: boolean) {
     input.disabled = all;
     if (all) input.checked = true;
   }
+  syncWorldCountToTasks();
+}
+
+function countSelectedTasks(config: BenchStartRequest): number {
+  if (config.problems?.length) return config.problems.length;
+  const pack = meta?.taskPacks.find((p) => p.id === (config.taskPack ?? meta?.defaults.taskPack));
+  return pack?.problems.length ?? 0;
+}
+
+function validateRunConfig(config: BenchStartRequest): string | null {
+  const worldCount = config.worldCount ?? meta?.defaults.worldCount ?? 8;
+  const taskCount = countSelectedTasks(config);
+  if (taskCount === 0) {
+    return "Select at least one task";
+  }
+  if (worldCount !== taskCount) {
+    return `World count must equal task count (${worldCount} worlds, ${taskCount} tasks selected)`;
+  }
+  return null;
 }
 
 function readFormConfig(): BenchStartRequest {
@@ -436,9 +475,18 @@ async function init() {
     toggleProblemCheckboxes(allProblems.checked);
   });
 
+  document.getElementById("problems-list")!.addEventListener("change", () => {
+    syncWorldCountToTasks();
+  });
+
   runForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const config = readFormConfig();
+    const validationError = validateRunConfig(config);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
     const res = await fetch("/api/bench/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

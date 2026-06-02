@@ -15,6 +15,7 @@ export type StreamSummary = {
   toolNames: string[];
   activityCount: number;
   lastProblemId?: string;
+  lastSuccessfulSubmit?: { problemId: string; at: string };
   maze?: LiveMazeState;
 };
 
@@ -132,6 +133,7 @@ export class LiveSlotTracker {
   private mcpToolCalls = 0;
   private toolNames: string[] = [];
   private lastProblemId?: string;
+  private lastSuccessfulSubmit?: { problemId: string; at: string };
 
   push(event: LiveActivityEvent): void {
     this.activity.push(event);
@@ -343,6 +345,9 @@ export class LiveSlotTracker {
         this.maze.path = answer.toUpperCase().replace(/[^NSEWUDRL]/g, "");
       }
       this.maze.lastSubmit = { answer, ok };
+      if (ok && problemId) {
+        this.lastSuccessfulSubmit = { problemId, at: new Date().toISOString() };
+      }
       if (ok && this.maze.atExit === undefined) {
         this.maze.atExit = ok;
       }
@@ -356,6 +361,9 @@ export class LiveSlotTracker {
       toolNames: [...this.toolNames],
       activityCount: this.activity.length,
       lastProblemId: this.lastProblemId,
+      lastSuccessfulSubmit: this.lastSuccessfulSubmit
+        ? { ...this.lastSuccessfulSubmit }
+        : undefined,
       maze: this.maze ? { ...this.maze } : undefined,
     };
   }

@@ -5,5 +5,5 @@
   "durationSec": 90,
   "benchSeed": 42,
   "taskPack": "maze",
-  "worldCount": 8
+  "worldCount": 3
 }

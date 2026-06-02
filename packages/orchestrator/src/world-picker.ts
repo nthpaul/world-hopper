@@ -19,28 +19,22 @@ export function buildSlotPrompt(
   world: WorldEndpoint,
   slotMs: number,
   slotIndex: number,
-  activeProblems?: string[],
+  assignedProblemId: string,
 ): string {
-  const problemHint =
-    activeProblems && activeProblems.length > 0
-      ? `Active problems this run: ${activeProblems.join(", ")}`
-      : "Call list_problems to see available problems";
-
   return [
     `BENCHMARK SLOT ${slotIndex}: You are connected ONLY to world-${world.id} via the "world" MCP server.`,
-    `Time budget: ~${Math.round(slotMs / 1000)} seconds.`,
+    `Max time: ~${Math.round(slotMs / 1000)} seconds — you will hop to the next world as soon as this task is solved.`,
+    "",
+    `REQUIRED TASK: You must solve problem "${assignedProblemId}" on world-${world.id}. Do not work on any other problem.`,
     "",
     "CRITICAL: Local shell/read/grep/glob tools are DISABLED. You MUST use world MCP tools only.",
     "",
-    problemHint,
-    "",
     "Required workflow:",
-    "1. Call MCP tool list_problems on server 'world'",
-    "2. Pick an unsolved problem (math-quiz is fastest if available)",
-    "3. get_problem then read_file for artifacts under /world/...",
-    "4. write_file or run_shell if needed, then submit(problemId, answer)",
+    `1. Call MCP tool get_problem on server 'world' with problemId="${assignedProblemId}"`,
+    "2. read_file for artifacts under /world/... as needed",
+    "3. write_file or run_shell if needed, then submit(problemId, answer)",
     "",
-    "Example: submit(problemId='math-quiz', answer='42') after reading quiz/question.txt",
+    `Example: submit(problemId='${assignedProblemId}', answer='...') after solving the problem`,
     "",
     "Do NOT use local filesystem tools. Previous worlds do not exist here.",
   ].join("\n");
