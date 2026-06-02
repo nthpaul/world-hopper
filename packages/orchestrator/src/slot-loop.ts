@@ -9,10 +9,14 @@ import {
   publishLiveResults,
   writeResults,
 } from "./results.js";
-import type { BenchConfig, BenchResults, SlotRecord } from "./types.js";
+import type { BenchConfig, BenchResults, LiveCurrentSlot, SlotRecord } from "./types.js";
 import { debugLog } from "./debug-log.js";
 import { listProblems } from "./task-packs.js";
 import { buildRunName } from "./run-name.js";
+import { consumeRunStreamWithLive, LiveSlotTracker } from "./live-activity.js";
+
+const LIVE_PUBLISH_MS = 400;
+const WORLD_POLL_MS = 800;
 
 async function cancelRun(run: Run | undefined): Promise<{ status?: string; runId?: string }> {
   if (!run) return {};
@@ -27,34 +31,20 @@ async function cancelRun(run: Run | undefined): Promise<{ status?: string; runId
   }
 }
 
-async function consumeRunStream(run: Run): Promise<{
-  chars: number;
-  mcpToolCalls: number;
-  toolNames: string[];
-}> {
-  let chars = 0;
-  let mcpToolCalls = 0;
-  const toolNames: string[] = [];
-  try {
-    for await (const event of run.stream()) {
-      if (event.type === "assistant") {
-        for (const block of event.message.content) {
-          if (block.type === "text") chars += block.text.length;
-        }
-      }
-      if (event.type === "tool_call") {
-        mcpToolCalls += 1;
-        toolNames.push(event.name);
-        debugLog("slot-loop.ts:tool_call", "tool call event", "H4-fix", {
-          name: event.name,
-          status: event.status,
-        });
-      }
-    }
-  } catch {
-    // stream may abort on cancel
-  }
-  return { chars, mcpToolCalls, toolNames };
+function buildCurrentSlot(
+  slotIndex: number,
+  worldId: string,
+  startedAt: string,
+  tracker: LiveSlotTracker,
+): LiveCurrentSlot {
+  const summary = tracker.summary();
+  return {
+    slotIndex,
+    worldId,
+    startedAt,
+    activity: tracker.snapshot(),
+    maze: summary.maze,
+  };
 }
 
 export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
@@ -79,14 +69,16 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   await Promise.all(
     config.worlds.map((w) =>
       fetchWorldStatus(w.statusUrl).then((s) => {
-        /* baseline fetch only */
         void s;
       }),
     ),
   );
 
   let currentRun: Run | undefined;
-  let streamTask: Promise<{ chars: number; mcpToolCalls: number; toolNames: string[] }> | undefined;
+  let streamTask:
+    | Promise<ReturnType<LiveSlotTracker["summary"]>>
+    | undefined;
+  let slotTracker: LiveSlotTracker | undefined;
 
   try {
     await using agent = await Agent.create({
@@ -119,6 +111,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
     while (Date.now() < benchDeadline) {
       const world = pickRandomWorld(config.worlds, rng);
       const slotStarted = new Date();
+      slotTracker = new LiveSlotTracker();
 
       publishLiveResults(config.resultsDir, {
         status: "running",
@@ -129,11 +122,12 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         agentId,
         slots,
         aggregates,
-        currentSlot: {
+        currentSlot: buildCurrentSlot(
           slotIndex,
-          worldId: world.id,
-          startedAt: slotStarted.toISOString(),
-        },
+          world.id,
+          slotStarted.toISOString(),
+          slotTracker,
+        ),
       });
 
       if (currentRun) {
@@ -160,15 +154,54 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         },
       });
 
-      streamTask = consumeRunStream(currentRun);
+      let lastPublish = 0;
+      const publishSlotLive = (force = false) => {
+        if (!slotTracker) return;
+        const now = Date.now();
+        if (!force && now - lastPublish < LIVE_PUBLISH_MS) return;
+        lastPublish = now;
+        publishLiveResults(config.resultsDir, {
+          status: "running",
+          startedAt,
+          endedAt: new Date().toISOString(),
+          config,
+          runName,
+          agentId,
+          slots,
+          aggregates,
+          currentSlot: buildCurrentSlot(
+            slotIndex,
+            world.id,
+            slotStarted.toISOString(),
+            slotTracker,
+          ),
+        });
+      };
+
+      streamTask = consumeRunStreamWithLive(currentRun, slotTracker, () => publishSlotLive());
+
       const slotDeadline = Date.now() + config.slotMs;
+      let lastWorldPoll = 0;
       while (Date.now() < slotDeadline) {
+        const now = Date.now();
+        if (now - lastWorldPoll >= WORLD_POLL_MS) {
+          lastWorldPoll = now;
+          try {
+            const status = await fetchWorldStatus(world.statusUrl);
+            slotTracker.mergeWorldMazes(status);
+            publishSlotLive(true);
+          } catch {
+            /* ignore transient world poll errors */
+          }
+        }
         await sleep(Math.min(250, slotDeadline - Date.now()));
       }
 
       const cancelInfo = await cancelRun(currentRun);
-      const streamResult = (await streamTask) ?? { chars: 0, mcpToolCalls: 0, toolNames: [] };
+      const streamResult =
+        (await streamTask) ?? slotTracker.summary();
       const after = await fetchWorldStatus(world.statusUrl);
+      slotTracker.mergeWorldMazes(after);
 
       const submitCalls = streamResult.toolNames.filter((n) => /submit/i.test(n));
       debugLog("slot-loop.ts:slot-end", "slot completed", "H1,H3,H4", {
@@ -182,6 +215,8 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         toolNames: streamResult.toolNames.slice(0, 20),
         submitCallCount: submitCalls.length,
         runStatus: cancelInfo.status,
+        activityCount: streamResult.activityCount,
+        lastProblemId: streamResult.lastProblemId,
       });
       console.log(
         `[slot ${slotIndex}] done world-${world.id} delta=${after.solvedCount - before.solvedCount} tools=${streamResult.mcpToolCalls} submit=${submitCalls.length}`,
@@ -200,6 +235,9 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         runStatus: cancelInfo.status,
         assistantChars: streamResult.chars,
         mcpToolCalls: streamResult.mcpToolCalls,
+        activityCount: streamResult.activityCount,
+        lastProblemId: streamResult.lastProblemId,
+        maze: streamResult.maze,
       });
 
       aggregates = buildAggregates(slots);
@@ -218,6 +256,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
       slotIndex += 1;
       currentRun = undefined;
       streamTask = undefined;
+      slotTracker = undefined;
     }
   } catch (err) {
     const message =

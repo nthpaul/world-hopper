@@ -53,12 +53,20 @@ export function createWorldRuntime(taskPackPath: string, worldId: string, worldR
     mazePositions,
     mazeAtExit,
     status(): WorldStatus {
+      const mazes: WorldStatus["mazes"] = {};
+      for (const [problemId, pos] of mazePositions) {
+        mazes[problemId] = {
+          position: { x: pos.x, y: pos.y },
+          atExit: mazeAtExit.get(problemId) === true,
+        };
+      }
       return {
         worldId,
         packId: pack.manifest.packId,
         solvedCount: solved.size,
         total: pack.manifest.problems.length,
         solvedIds: [...solved],
+        ...(Object.keys(mazes).length > 0 ? { mazes } : {}),
       };
     },
   };

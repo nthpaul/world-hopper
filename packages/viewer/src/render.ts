@@ -1,5 +1,6 @@
 import type { BenchResults, BenchRunStatus, ProblemMeta } from "./types.js";
 import { renderProblemsRunSummary } from "./render-problems.js";
+import { renderLiveAttempt } from "./render-live.js";
 
 const WORLD_PALETTE = [
   "#7a6a52",
@@ -134,8 +135,11 @@ export function renderResults(
   const errorBlock =
     data.error ? `<div class="error-banner">${data.error}</div>` : "";
 
+  const livePanel = isLive ? renderLiveAttempt(data, problems) : "";
+
   return `
     ${errorBlock}
+    ${livePanel}
     <header class="results-header">
       <div>
         <h1>World-Hop Benchmark ${statusBadge}</h1>

@@ -22,6 +22,7 @@ export type ProblemMeta = {
   artifacts?: string[];
   allowShell?: boolean;
   allowMove?: boolean;
+  layoutText?: string;
 };
 
 export type TaskPackMeta = {
@@ -73,18 +74,30 @@ export function loadMeta(root: string): MetaResponse {
           artifacts?: string[];
           allowShell?: boolean;
           allowMove?: boolean;
+          mazeLayout?: string;
         }>;
       };
+      const problemsDir = path.join(packsDir, id, "problems");
       taskPacks.push({
         id,
-        problems: manifest.problems.map((p) => ({
-          id: p.id,
-          title: p.title,
-          prompt: p.prompt,
-          artifacts: p.artifacts,
-          allowShell: p.allowShell,
-          allowMove: p.allowMove,
-        })),
+        problems: manifest.problems.map((p) => {
+          let layoutText: string | undefined;
+          if (p.mazeLayout) {
+            const layoutPath = path.join(problemsDir, p.mazeLayout);
+            if (fs.existsSync(layoutPath)) {
+              layoutText = fs.readFileSync(layoutPath, "utf8");
+            }
+          }
+          return {
+            id: p.id,
+            title: p.title,
+            prompt: p.prompt,
+            artifacts: p.artifacts,
+            allowShell: p.allowShell,
+            allowMove: p.allowMove,
+            layoutText,
+          };
+        }),
       });
     }
   }

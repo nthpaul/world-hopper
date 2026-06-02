@@ -19,12 +19,42 @@ export type WorldEndpoint = {
   statusUrl: string;
 };
 
+export type WorldMazeStatus = {
+  position: { x: number; y: number };
+  atExit: boolean;
+};
+
 export type WorldStatusSnapshot = {
   worldId: string;
   packId: string;
   solvedCount: number;
   total: number;
   solvedIds: string[];
+  mazes?: Record<string, WorldMazeStatus>;
+};
+
+export type LiveActivityEvent = {
+  at: string;
+  kind: "assistant" | "thinking" | "tool" | "world";
+  label: string;
+  detail?: string;
+  ok?: boolean;
+};
+
+export type LiveMazeState = {
+  problemId: string;
+  position?: { x: number; y: number };
+  path: string;
+  atExit?: boolean;
+  lastSubmit?: { answer: string; ok?: boolean };
+};
+
+export type LiveCurrentSlot = {
+  slotIndex: number;
+  worldId: string;
+  startedAt: string;
+  activity: LiveActivityEvent[];
+  maze?: LiveMazeState;
 };
 
 export type SlotRecord = {
@@ -39,6 +69,9 @@ export type SlotRecord = {
   runStatus?: string;
   assistantChars: number;
   mcpToolCalls: number;
+  activityCount?: number;
+  lastProblemId?: string;
+  maze?: LiveMazeState;
 };
 
 export type BenchRunStatus = "starting" | "running" | "complete" | "failed" | "stopped";
@@ -72,9 +105,5 @@ export type LiveBenchResults = BenchResults & {
   updatedAt: string;
   resultsFile?: string;
   error?: string;
-  currentSlot?: {
-    slotIndex: number;
-    worldId: string;
-    startedAt: string;
-  };
+  currentSlot?: LiveCurrentSlot;
 };

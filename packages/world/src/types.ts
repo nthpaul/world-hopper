@@ -54,4 +54,11 @@ export type WorldStatus = {
   solvedCount: number;
   total: number;
   solvedIds: string[];
+  mazes?: Record<
+    string,
+    {
+      position: { x: number; y: number };
+      atExit: boolean;
+    }
+  >;
 };

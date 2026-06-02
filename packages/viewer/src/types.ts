@@ -11,6 +11,30 @@ export type ModelsResponse = {
   models: ModelOption[];
 };
 
+export type LiveActivityEvent = {
+  at: string;
+  kind: "assistant" | "thinking" | "tool" | "world";
+  label: string;
+  detail?: string;
+  ok?: boolean;
+};
+
+export type LiveMazeState = {
+  problemId: string;
+  position?: { x: number; y: number };
+  path: string;
+  atExit?: boolean;
+  lastSubmit?: { answer: string; ok?: boolean };
+};
+
+export type LiveCurrentSlot = {
+  slotIndex: number;
+  worldId: string;
+  startedAt: string;
+  activity?: LiveActivityEvent[];
+  maze?: LiveMazeState;
+};
+
 export type BenchResults = {
   runName?: string;
   startedAt: string;
@@ -38,6 +62,9 @@ export type BenchResults = {
     runStatus?: string;
     assistantChars?: number;
     mcpToolCalls?: number;
+    activityCount?: number;
+    lastProblemId?: string;
+    maze?: LiveMazeState;
   }>;
   aggregates: {
     totalSlots: number;
@@ -49,11 +76,7 @@ export type BenchResults = {
   updatedAt?: string;
   resultsFile?: string;
   error?: string;
-  currentSlot?: {
-    slotIndex: number;
-    worldId: string;
-    startedAt: string;
-  };
+  currentSlot?: LiveCurrentSlot;
 };
 
 export type ProblemMeta = {
@@ -63,6 +86,7 @@ export type ProblemMeta = {
   artifacts?: string[];
   allowShell?: boolean;
   allowMove?: boolean;
+  layoutText?: string;
 };
 
 export type BenchProfileMeta = {

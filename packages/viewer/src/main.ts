@@ -10,6 +10,7 @@ import type {
 } from "./types.js";
 import { renderResults } from "./render.js";
 import { problemsForRun, renderProblemsReference } from "./render-problems.js";
+import { scrollActivityFeedToBottom } from "./render-live.js";
 
 const LIVE_FILE = "live.json";
 const POLL_MS = 1000;
@@ -145,6 +146,7 @@ function runProblems(data: BenchResults): ProblemMeta[] {
 function showResults(data: BenchResults, label: string) {
   const content = document.getElementById("content")!;
   content.innerHTML = renderResults(data, data.runName ?? label, runProblems(data));
+  scrollActivityFeedToBottom();
 }
 
 function parseFile(text: string, filename: string) {
