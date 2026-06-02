@@ -2,9 +2,9 @@
 
 Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **world** container once (seeded order), solving pluggable task-pack problems via HTTP MCP.
 
-![World-Hop Benchmark viewer — completed quick profile run](docs/images/viewer.png)
+![World-Hop Benchmark viewer — quick profile, 3/3 solved](docs/images/viewer.png)
 
-*Viewer showing a completed run: tasks solved, visit timeline, and per-task outcomes.*
+*Completed `configs/quick.json` run after rebuild: 3 worlds, 3/3 tasks solved, 11s total.*
 
 ## Architecture
 
