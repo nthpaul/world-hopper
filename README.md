@@ -1,4 +1,4 @@
-# Cursor SDK World-Hop Benchmark
+# World-Hop Benchmark
 
 Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **world** container once (seeded order), solving pluggable task-pack problems via HTTP MCP.
 
