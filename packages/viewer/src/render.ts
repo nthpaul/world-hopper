@@ -50,6 +50,38 @@ function statusLabel(status: BenchRunStatus | undefined): string {
   }
 }
 
+function resolveRunWorldCount(config: BenchResults["config"]): number {
+  if (config.problemIds?.length) return config.problemIds.length;
+  const assignmentCount = config.worldAssignments
+    ? Object.keys(config.worldAssignments).length
+    : 0;
+  if (assignmentCount > 0) return assignmentCount;
+  if (config.worldVisitOrder?.length) return config.worldVisitOrder.length;
+  return config.worldCount;
+}
+
+function resolveTasksAttempted(data: BenchResults): number {
+  const completed = data.slots.length;
+  return completed + (data.currentSlot ? 1 : 0);
+}
+
+function resolveTasksSolved(
+  data: BenchResults,
+  tasksTotal: number,
+): number {
+  const { aggregates, config } = data;
+  if (aggregates.tasksSolved !== undefined) return aggregates.tasksSolved;
+
+  if (!config.worldAssignments) return 0;
+
+  let solved = 0;
+  for (const [worldId, problemId] of Object.entries(config.worldAssignments)) {
+    const worldSolved = aggregates.uniqueSolvedByWorld?.[worldId] ?? [];
+    if (worldSolved.includes(problemId)) solved += 1;
+  }
+  return Math.min(solved, tasksTotal);
+}
+
 export function renderResults(
   data: BenchResults,
   sourceLabel: string,
@@ -60,9 +92,9 @@ export function renderResults(
     isLive ? Date.now() : new Date(data.endedAt || data.updatedAt || data.startedAt).getTime();
   const runMs = endMs - new Date(data.startedAt).getTime();
   const { config, aggregates, slots } = data;
-  const tasksTotal = aggregates.tasksTotal ?? config.worldCount;
-  const tasksSolved = aggregates.tasksSolved ?? 0;
-  const tasksAttempted = aggregates.tasksAttempted ?? slots.length;
+  const tasksTotal = aggregates.tasksTotal ?? resolveRunWorldCount(config);
+  const tasksSolved = resolveTasksSolved(data, tasksTotal);
+  const tasksAttempted = resolveTasksAttempted(data);
   const solveRate = aggregates.solveRate ?? (tasksTotal > 0 ? tasksSolved / tasksTotal : 0);
   const totalSolveDurationMs = aggregates.totalSolveDurationMs ?? 0;
   const statusBadge = data.status
@@ -86,7 +118,7 @@ export function renderResults(
     ...Object.keys(aggregates.perWorldVisitCount ?? {}),
     ...Object.keys(aggregates.uniqueSolvedByWorld ?? {}),
   ]);
-  for (let i = 0; i < config.worldCount; i++) worldIds.add(String(i));
+  for (let i = 0; i < tasksTotal; i++) worldIds.add(String(i));
 
   const worldGrid = [...worldIds]
     .sort((a, b) => Number(a) - Number(b))
@@ -217,7 +249,7 @@ export function renderResults(
       }
       <div class="stat">
         <div class="stat-label">Slots</div>
-        <div class="stat-value num">${aggregates.totalSlots}${data.currentSlot ? '<span class="stat-live">+</span>' : ""}</div>
+        <div class="stat-value num">${tasksTotal}</div>
       </div>
       <div class="stat">
         <div class="stat-label">${isLive ? "Elapsed" : "Run time"}</div>
@@ -235,10 +267,6 @@ export function renderResults(
       </div>`
           : ""
       }
-      <div class="stat">
-        <div class="stat-label">Worlds</div>
-        <div class="stat-value num">${config.worldCount}</div>
-      </div>
     </div>
 
     <section>

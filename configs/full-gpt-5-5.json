@@ -1,0 +1,9 @@
+{
+  "name": "full-gpt-5-5",
+  "model": "gpt-5.5",
+  "slotMs": 30000,
+  "durationSec": 240,
+  "benchSeed": 42,
+  "taskPack": "example",
+  "worldCount": 8
+}

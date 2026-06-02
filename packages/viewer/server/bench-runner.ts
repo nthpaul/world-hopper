@@ -130,10 +130,10 @@ function writeStartingLive(config: BenchStartRequest): void {
   const startedAt = new Date().toISOString();
   const merged = mergeProfile(config);
   const durationMs = (merged.durationSec ?? 60) * 1000;
-  const worldCount = merged.worldCount ?? 8;
+  const problemIds = resolveSelectedProblems(merged, repoRoot);
+  const worldCount = merged.worldCount ?? problemIds.length;
   const worldAssignments = buildWorldAssignmentsForRun(merged, repoRoot);
   const worldVisitOrder = buildWorldVisitOrderIds(merged.benchSeed ?? 42, worldCount);
-  const problemIds = resolveSelectedProblems(merged, repoRoot);
   const runName = buildRunName({
     modelId: merged.model ?? "composer-2.5",
     benchDurationMs: durationMs,
@@ -152,7 +152,7 @@ function writeStartingLive(config: BenchStartRequest): void {
       benchDurationMs: durationMs,
       benchSeed: merged.benchSeed ?? 42,
       modelId: merged.model ?? "composer-2.5",
-      worldCount: merged.worldCount ?? 8,
+      worldCount,
       taskPack: merged.taskPack ?? "example",
       problemIds,
       worldAssignments,

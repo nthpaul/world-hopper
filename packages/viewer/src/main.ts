@@ -284,6 +284,7 @@ function fillProblemsForPack(packId: string, selected?: string[]) {
 
   renderPackReference(packId);
   syncWorldCountToTasks();
+  updateDurationHint("deps");
 }
 
 function syncWorldCountToTasks(): void {
@@ -311,7 +312,7 @@ function toggleProblemCheckboxes(all: boolean) {
     input.closest(".problem-option")?.classList.toggle("problem-option--locked", all);
   }
   syncWorldCountToTasks();
-  updateDurationHint();
+  updateDurationHint("deps");
 }
 
 function countSelectedTasks(config: BenchStartRequest): number {
@@ -339,7 +340,7 @@ function minBenchTimeMessage(minSec: number): string {
   return `Set max bench time to at least ${minSec} seconds.`;
 }
 
-function updateDurationHint(): void {
+function updateDurationHint(source: "deps" | "duration" = "deps"): void {
   const hint = document.getElementById("duration-hint");
   const durationInput = document.getElementById("duration-input") as HTMLInputElement | null;
   const durationLabel = document.getElementById("duration-label");
@@ -353,10 +354,16 @@ function updateDurationHint(): void {
   const minDurationSec = Math.ceil(minDurationMs / 1000);
 
   if (durationInput) {
-    durationInput.min = String(minDurationSec);
+    durationInput.min = String(Math.max(minDurationSec, 1));
+    if (source === "deps" && minDurationSec > 0) {
+      durationInput.value = String(minDurationSec);
+    }
   }
 
-  if (durationMs < minDurationMs) {
+  const effectiveDurationMs =
+    source === "deps" ? minDurationMs : (Number(durationInput?.value) || 0) * 1000;
+
+  if (effectiveDurationMs < minDurationMs) {
     durationLabel?.classList.add("field-error");
     hint.hidden = false;
     hint.classList.add("error");
@@ -468,7 +475,7 @@ function populateMetaForm() {
     meta.defaults.worldCount,
   );
   fillProblemsForPack(meta.defaults.taskPack);
-  updateDurationHint();
+  updateDurationHint("deps");
 }
 
 async function init() {
@@ -509,17 +516,17 @@ async function init() {
     }
     syncWorldCountToTasks();
     document.getElementById("problems-fieldset")?.classList.remove("field-error");
-    updateDurationHint();
+    updateDurationHint("deps");
   });
 
-  document.getElementById("slot-input")!.addEventListener("input", () => updateDurationHint());
-  document.getElementById("duration-input")!.addEventListener("input", () => updateDurationHint());
+  document.getElementById("slot-input")!.addEventListener("input", () => updateDurationHint("deps"));
+  document.getElementById("duration-input")!.addEventListener("input", () => updateDurationHint("duration"));
 
   runForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const config = readFormConfig();
     clearFieldErrors();
-    updateDurationHint();
+    updateDurationHint("duration");
     const validation = validateRunConfig(config);
     if (validation) {
       markFieldError(validation.field);

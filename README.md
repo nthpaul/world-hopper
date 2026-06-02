@@ -48,7 +48,15 @@ View results in the browser:
 npm run viewer
 ```
 
-Open http://localhost:5173 — pick a run from the dropdown or drop a JSON file. Cream UI, Georgia prose, monospace numbers.
+Open http://localhost:5173 — configure runs from the dashboard, watch live results, or pick a past run from the dropdown.
+
+The run form:
+
+- **All tasks in pack** — when checked, every problem in the pack runs and individual task toggles are locked
+- **Max bench time** — auto-fills to the minimum (`slotMs × worldCount` in seconds) whenever slot length or task selection changes; you can raise it for extra headroom
+- **Validation** — invalid duration or task selection is blocked with a field highlight before start
+
+Cream UI, Georgia prose, monospace numbers.
 
 ## Bench profiles (`configs/`)
 
@@ -59,6 +67,8 @@ Profiles set model, slot duration, total runtime, task pack, and which problems 
 | [`configs/quick.json`](configs/quick.json) | composer-2.5 | 15s | 60s | math-quiz, find-flag, sum-numbers |
 | [`configs/math-only.json`](configs/math-only.json) | composer-2.5 | 20s | 60s | math-quiz, sum-numbers |
 | [`configs/maze.json`](configs/maze.json) | composer-2.5 | 25s | 90s | all maze pack problems |
+| [`configs/full.json`](configs/full.json) | composer-2.5 | 30s | 240s | all example pack problems (8 worlds) |
+| [`configs/full-gpt-5-5.json`](configs/full-gpt-5-5.json) | gpt-5.5 | 30s | 240s | all example pack problems (8 worlds) |
 
 Run a profile with Docker (sets env for agent + worlds):
 
@@ -142,7 +152,7 @@ npm run bench -- \
 |----------|---------|-------------|
 | `CURSOR_API_KEY` | — | Required SDK API key |
 | `SLOT_MS` | `5000` | Max time per world slot (timeout cap); slots end early on successful submit |
-| `BENCH_DURATION_MS` | `120000` | Max total bench wall time (stops early if all worlds not visited in time) |
+| `BENCH_DURATION_MS` | `120000` | Max total bench wall time; must be ≥ `SLOT_MS × WORLD_COUNT` |
 | `BENCH_SEED` | `42` | RNG seed for world selection |
 | `WORLD_COUNT` | `8` | Used when `WORLD_URLS` unset |
 | `MODEL_ID` | `composer-2.5` | SDK model id |
