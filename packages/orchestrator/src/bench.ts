@@ -45,6 +45,7 @@ async function main(): Promise<void> {
         problems: activeProblems,
         worlds: config.worlds.length,
         worldAssignments: config.worldAssignments,
+        worldVisitOrder: config.worldVisitOrder,
       },
       null,
       2,

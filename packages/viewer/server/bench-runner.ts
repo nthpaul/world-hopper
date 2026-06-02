@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   buildWorldAssignments,
+  buildWorldVisitOrderIds,
   formatWorldAssignments,
   validateWorldTaskCount,
 } from "../../../scripts/world-assignments.mjs";
@@ -122,7 +123,9 @@ function writeStartingLive(config: BenchStartRequest): void {
   const startedAt = new Date().toISOString();
   const merged = mergeProfile(config);
   const durationMs = (merged.durationSec ?? 60) * 1000;
+  const worldCount = merged.worldCount ?? 8;
   const worldAssignments = buildWorldAssignmentsForRun(merged, repoRoot);
+  const worldVisitOrder = buildWorldVisitOrderIds(merged.benchSeed ?? 42, worldCount);
   const problemIds = resolveSelectedProblems(merged, repoRoot);
   const runName = buildRunName({
     modelId: merged.model ?? "composer-2.5",
@@ -146,6 +149,7 @@ function writeStartingLive(config: BenchStartRequest): void {
       taskPack: merged.taskPack ?? "example",
       problemIds,
       worldAssignments,
+      worldVisitOrder,
       profileName: merged.name ?? merged.profile,
     },
     agentId: "",
@@ -155,6 +159,11 @@ function writeStartingLive(config: BenchStartRequest): void {
       totalSolvedDelta: 0,
       uniqueSolvedByWorld: {},
       perWorldVisitCount: {},
+      tasksTotal: worldCount,
+      tasksAttempted: 0,
+      tasksSolved: 0,
+      totalSolveDurationMs: 0,
+      solveRate: 0,
     },
   };
   fs.writeFileSync(path.join(resultsDir, "live.json"), JSON.stringify(payload, null, 2));

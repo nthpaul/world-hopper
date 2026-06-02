@@ -1,6 +1,6 @@
 # Cursor SDK World-Hop Benchmark
 
-Eval-style harness: one durable Cursor SDK agent hops randomly between isolated Docker **world** containers every 5 seconds, solving pluggable task-pack problems via HTTP MCP.
+Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **world** container once (seeded order), solving pluggable task-pack problems via HTTP MCP.
 
 ## Architecture
 
@@ -8,7 +8,9 @@ Eval-style harness: one durable Cursor SDK agent hops randomly between isolated 
 - **World containers** (`world-0` … `world-N`) — each hosts **one unique task** for the run
 - **Task packs** — pluggable JSON manifests under `task-packs/`
 
-At bench start, selected tasks are shuffled (seeded) and assigned 1:1 to worlds via `WORLD_ASSIGNMENTS`. The agent hops randomly between worlds each slot but **cannot choose tasks** — it must solve whichever task is assigned to the world it lands on. **`worldCount` must equal the number of selected tasks** — each world hosts exactly one task, and every selected task is used.
+At bench start, selected tasks are shuffled (seeded) and assigned 1:1 to worlds via `WORLD_ASSIGNMENTS`. The agent visits **each world exactly once** in a seeded visit order (`worldVisitOrder`). It **cannot choose tasks** — it must solve whichever task is assigned to the world it lands on. **`worldCount` must equal the number of selected tasks**.
+
+Each slot ends as soon as the assigned task is successfully submitted (`slotMs` is a per-slot timeout cap). **`benchDurationMs`** is an optional total wall-clock cap: if time runs out before all worlds are visited, the run stops with partial coverage.
 
 ## Prerequisites
 
@@ -138,7 +140,7 @@ npm run bench -- \
 |----------|---------|-------------|
 | `CURSOR_API_KEY` | — | Required SDK API key |
 | `SLOT_MS` | `5000` | Max time per world slot (timeout cap); slots end early on successful submit |
-| `BENCH_DURATION_MS` | `120000` | Total benchmark duration |
+| `BENCH_DURATION_MS` | `120000` | Max total bench wall time (stops early if all worlds not visited in time) |
 | `BENCH_SEED` | `42` | RNG seed for world selection |
 | `WORLD_COUNT` | `8` | Used when `WORLD_URLS` unset |
 | `MODEL_ID` | `composer-2.5` | SDK model id |

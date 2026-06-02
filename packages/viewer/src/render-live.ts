@@ -118,9 +118,13 @@ export function shouldAutoScrollFeed(feed: HTMLElement | null): boolean {
   return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 48;
 }
 
-export function scrollActivityFeedToBottom(): void {
-  const feed = document.getElementById("activity-feed");
-  if (feed && shouldAutoScrollFeed(feed)) {
-    feed.scrollTop = feed.scrollHeight;
-  }
+export function scrollActivityFeedToBottom(force = false): void {
+  const scroll = () => {
+    const feed = document.getElementById("activity-feed");
+    if (!feed) return;
+    if (force || shouldAutoScrollFeed(feed)) {
+      feed.scrollTop = feed.scrollHeight;
+    }
+  };
+  requestAnimationFrame(scroll);
 }

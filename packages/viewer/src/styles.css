@@ -212,6 +212,29 @@ section h2 {
   margin-top: 0.25rem;
 }
 
+.world-cell-not-visited {
+  opacity: 0.72;
+  border-style: dashed;
+}
+
+.world-missed {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  margin-top: 0.15rem;
+}
+
+.duration-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #8a5a20;
+}
+
+.stat-denom {
+  font-size: 0.85em;
+  color: var(--ink-muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

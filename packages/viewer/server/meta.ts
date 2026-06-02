@@ -31,7 +31,6 @@ export type TaskPackMeta = {
 };
 
 export type MetaResponse = {
-  profiles: BenchProfileMeta[];
   taskPacks: TaskPackMeta[];
   defaults: {
     model: string;
@@ -45,17 +44,12 @@ export type MetaResponse = {
 
 export function loadMeta(root: string): MetaResponse {
   const configsDir = path.join(root, "configs");
-  const profiles: BenchProfileMeta[] = [];
+  let quickDefaults: Partial<BenchProfileMeta> | undefined;
 
   if (fs.existsSync(configsDir)) {
-    for (const file of fs.readdirSync(configsDir).filter((f) => f.endsWith(".json")).sort()) {
-      const filePath = path.join(configsDir, file);
-      const profile = JSON.parse(fs.readFileSync(filePath, "utf8")) as BenchProfileMeta;
-      profiles.push({
-        ...profile,
-        id: file.replace(/\.json$/, ""),
-        path: `configs/${file}`,
-      });
+    const quickPath = path.join(configsDir, "quick.json");
+    if (fs.existsSync(quickPath)) {
+      quickDefaults = JSON.parse(fs.readFileSync(quickPath, "utf8")) as BenchProfileMeta;
     }
   }
 
@@ -102,10 +96,9 @@ export function loadMeta(root: string): MetaResponse {
     }
   }
 
-  const quick = profiles.find((p) => p.id === "quick");
+  const quick = quickDefaults;
 
   return {
-    profiles,
     taskPacks,
     defaults: {
       model: quick?.model ?? "composer-2.5",

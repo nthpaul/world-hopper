@@ -20,7 +20,10 @@ export function writeResults(resultsDir: string, results: BenchResults): string 
   return path;
 }
 
-export function buildAggregates(slots: SlotRecord[]): BenchResults["aggregates"] {
+export function buildAggregates(
+  slots: SlotRecord[],
+  tasksTotal: number,
+): BenchResults["aggregates"] {
   const perWorldVisitCount: Record<string, number> = {};
   const uniqueSolvedByWorld: Record<string, string[]> = {};
   let totalSolvedDelta = 0;
@@ -30,11 +33,22 @@ export function buildAggregates(slots: SlotRecord[]): BenchResults["aggregates"]
     totalSolvedDelta += slot.solvedDelta;
   }
 
+  const tasksAttempted = slots.length;
+  const tasksSolved = slots.filter((slot) => slot.exitReason === "solved").length;
+  const totalSolveDurationMs = slots
+    .filter((slot) => slot.exitReason === "solved")
+    .reduce((sum, slot) => sum + (slot.solveDurationMs ?? 0), 0);
+
   return {
     totalSlots: slots.length,
     totalSolvedDelta,
     uniqueSolvedByWorld,
     perWorldVisitCount,
+    tasksTotal,
+    tasksAttempted,
+    tasksSolved,
+    totalSolveDurationMs,
+    solveRate: tasksTotal > 0 ? tasksSolved / tasksTotal : 0,
   };
 }
 
@@ -48,6 +62,22 @@ export function mergeWorldSnapshots(
   aggregates.uniqueSolvedByWorld[worldId] = [...existing];
 }
 
+export function reconcileTasksSolved(
+  aggregates: BenchResults["aggregates"],
+  worldAssignments: Record<string, string> | undefined,
+): void {
+  if (!worldAssignments) return;
+
+  let tasksSolved = 0;
+  for (const [worldId, problemId] of Object.entries(worldAssignments)) {
+    const solved = aggregates.uniqueSolvedByWorld[worldId] ?? [];
+    if (solved.includes(problemId)) tasksSolved += 1;
+  }
+
+  aggregates.tasksSolved = tasksSolved;
+  aggregates.solveRate = aggregates.tasksTotal > 0 ? tasksSolved / aggregates.tasksTotal : 0;
+}
+
 export function buildResultsConfig(config: BenchConfig): BenchResults["config"] {
   return {
     slotMs: config.slotMs,
@@ -58,6 +88,7 @@ export function buildResultsConfig(config: BenchConfig): BenchResults["config"] 
     taskPack: config.taskPack,
     problemIds: config.problemIds ?? listProblems(config.taskPack).map((p) => p.id),
     worldAssignments: config.worldAssignments,
+    worldVisitOrder: config.worldVisitOrder,
     profileName: config.profileName,
   };
 }

@@ -48,6 +48,7 @@ export type BenchResults = {
     taskPack?: string;
     problemIds?: string[];
     worldAssignments?: Record<string, string>;
+    worldVisitOrder?: string[];
     profileName?: string;
   };
   agentId: string;
@@ -74,6 +75,11 @@ export type BenchResults = {
     totalSolvedDelta: number;
     uniqueSolvedByWorld: Record<string, string[]>;
     perWorldVisitCount: Record<string, number>;
+    tasksTotal?: number;
+    tasksAttempted?: number;
+    tasksSolved?: number;
+    totalSolveDurationMs?: number;
+    solveRate?: number;
   };
   status?: BenchRunStatus;
   updatedAt?: string;
@@ -92,21 +98,7 @@ export type ProblemMeta = {
   layoutText?: string;
 };
 
-export type BenchProfileMeta = {
-  id: string;
-  path: string;
-  name?: string;
-  model?: string;
-  slotMs?: number;
-  durationSec?: number;
-  benchSeed?: number;
-  taskPack?: string;
-  problems?: string[];
-  worldCount?: number;
-};
-
 export type MetaResponse = {
-  profiles: BenchProfileMeta[];
   taskPacks: Array<{ id: string; problems: ProblemMeta[] }>;
   defaults: {
     model: string;

@@ -10,7 +10,7 @@ import type {
 } from "./types.js";
 import { renderResults } from "./render.js";
 import { problemsForRun, renderProblemsReference } from "./render-problems.js";
-import { scrollActivityFeedToBottom } from "./render-live.js";
+import { scrollActivityFeedToBottom, shouldAutoScrollFeed } from "./render-live.js";
 
 const LIVE_FILE = "live.json";
 const POLL_MS = 1000;
@@ -32,16 +32,10 @@ function shell() {
       <section class="run-panel">
         <h2>New run</h2>
         <form id="run-form" class="run-form">
-          <div class="form-row">
-            <label for="profile-select">Profile</label>
-            <select id="profile-select">
-              <option value="">Custom</option>
-            </select>
-          </div>
           <div class="form-grid">
             <label>Model<select id="model-select" name="model" required></select></label>
             <label>Max slot (ms)<input id="slot-input" name="slotMs" type="number" min="1000" step="1000" required /></label>
-            <label>Duration (sec)<input id="duration-input" name="durationSec" type="number" min="10" step="5" required /></label>
+            <label>Max bench time (sec)<input id="duration-input" name="durationSec" type="number" min="10" step="5" required /></label>
             <label>Seed<input id="seed-input" name="benchSeed" type="number" required /></label>
             <label>Task pack<select id="pack-select" name="taskPack"></select></label>
             <label>Worlds<input id="worlds-input" name="worldCount" type="number" min="1" max="8" required readonly title="Always equals the number of selected tasks" /></label>
@@ -52,6 +46,7 @@ function shell() {
             <label class="checkbox-inline"><input type="checkbox" id="all-problems" checked /> All tasks in pack</label>
           </fieldset>
           <div id="pack-tasks-reference" class="pack-tasks-reference"></div>
+          <div id="duration-hint" class="duration-hint" hidden></div>
           <div class="form-actions">
             <button type="submit" id="start-btn">Start run</button>
             <button type="button" id="stop-btn" disabled>Stop</button>
@@ -145,8 +140,12 @@ function runProblems(data: BenchResults): ProblemMeta[] {
 
 function showResults(data: BenchResults, label: string) {
   const content = document.getElementById("content")!;
+  const feed = document.getElementById("activity-feed");
+  const pinFeed = feed ? shouldAutoScrollFeed(feed) : true;
   content.innerHTML = renderResults(data, data.runName ?? label, runProblems(data));
-  scrollActivityFeedToBottom();
+  if (watchingLive || pinFeed) {
+    scrollActivityFeedToBottom(true);
+  }
 }
 
 function parseFile(text: string, filename: string) {
@@ -305,36 +304,6 @@ function syncWorldCountToTasks(): void {
   }
 }
 
-function applyProfile(profileId: string) {
-  if (!meta || !profileId) return;
-  const profile = meta.profiles.find((p) => p.id === profileId);
-  if (!profile) return;
-
-  (document.getElementById("model-select") as HTMLSelectElement).value = resolveModelId(
-    profile.model ?? meta.defaults.model,
-  );
-  (document.getElementById("slot-input") as HTMLInputElement).value = String(
-    profile.slotMs ?? meta.defaults.slotMs,
-  );
-  (document.getElementById("duration-input") as HTMLInputElement).value = String(
-    profile.durationSec ?? meta.defaults.durationSec,
-  );
-  (document.getElementById("seed-input") as HTMLInputElement).value = String(
-    profile.benchSeed ?? meta.defaults.benchSeed,
-  );
-  (document.getElementById("pack-select") as HTMLSelectElement).value =
-    profile.taskPack ?? meta.defaults.taskPack;
-  (document.getElementById("worlds-input") as HTMLInputElement).value = String(
-    profile.worldCount ?? meta.defaults.worldCount,
-  );
-
-  const allProblems = document.getElementById("all-problems") as HTMLInputElement;
-  allProblems.checked = !profile.problems?.length;
-  fillProblemsForPack(profile.taskPack ?? meta.defaults.taskPack, profile.problems);
-  toggleProblemCheckboxes(allProblems.checked);
-  syncWorldCountToTasks();
-}
-
 function toggleProblemCheckboxes(all: boolean) {
   for (const input of document.querySelectorAll<HTMLInputElement>("#problems-list input")) {
     input.disabled = all;
@@ -347,6 +316,25 @@ function countSelectedTasks(config: BenchStartRequest): number {
   if (config.problems?.length) return config.problems.length;
   const pack = meta?.taskPacks.find((p) => p.id === (config.taskPack ?? meta?.defaults.taskPack));
   return pack?.problems.length ?? 0;
+}
+
+function updateDurationHint(): void {
+  const hint = document.getElementById("duration-hint");
+  if (!hint) return;
+
+  const config = readFormConfig();
+  const worldCount = config.worldCount ?? meta?.defaults.worldCount ?? 8;
+  const slotMs = config.slotMs ?? meta?.defaults.slotMs ?? 15000;
+  const durationMs = (config.durationSec ?? meta?.defaults.durationSec ?? 60) * 1000;
+  const minDurationMs = worldCount * slotMs;
+
+  if (durationMs < minDurationMs) {
+    hint.hidden = false;
+    hint.textContent = `Max bench time may be too short to visit all ${worldCount} worlds (needs up to ${Math.ceil(minDurationMs / 1000)}s at max slot time).`;
+  } else {
+    hint.hidden = true;
+    hint.textContent = "";
+  }
 }
 
 function validateRunConfig(config: BenchStartRequest): string | null {
@@ -362,7 +350,6 @@ function validateRunConfig(config: BenchStartRequest): string | null {
 }
 
 function readFormConfig(): BenchStartRequest {
-  const profileSelect = document.getElementById("profile-select") as HTMLSelectElement;
   const allProblems = (document.getElementById("all-problems") as HTMLInputElement).checked;
   const problems = allProblems
     ? undefined
@@ -371,7 +358,6 @@ function readFormConfig(): BenchStartRequest {
       );
 
   return {
-    profile: profileSelect.value || undefined,
     model: (document.getElementById("model-select") as HTMLSelectElement).value,
     slotMs: Number((document.getElementById("slot-input") as HTMLInputElement).value),
     durationSec: Number((document.getElementById("duration-input") as HTMLInputElement).value),
@@ -415,14 +401,6 @@ function populateMetaForm() {
 
   populateModelSelect(meta.defaults.model);
 
-  const profileSelect = document.getElementById("profile-select") as HTMLSelectElement;
-  for (const profile of meta.profiles) {
-    const opt = document.createElement("option");
-    opt.value = profile.id;
-    opt.textContent = profile.name ?? profile.id;
-    profileSelect.appendChild(opt);
-  }
-
   const packSelect = document.getElementById("pack-select") as HTMLSelectElement;
   for (const pack of meta.taskPacks) {
     const opt = document.createElement("option");
@@ -441,6 +419,7 @@ function populateMetaForm() {
     meta.defaults.worldCount,
   );
   fillProblemsForPack(meta.defaults.taskPack);
+  updateDurationHint();
 }
 
 async function init() {
@@ -453,7 +432,6 @@ async function init() {
   const dropZone = document.getElementById("drop-zone")!;
   const fileInput = document.getElementById("file-input") as HTMLInputElement;
   const runForm = document.getElementById("run-form") as HTMLFormElement;
-  const profileSelect = document.getElementById("profile-select") as HTMLSelectElement;
   const packSelect = document.getElementById("pack-select") as HTMLSelectElement;
   const allProblems = document.getElementById("all-problems") as HTMLInputElement;
   const stopBtn = document.getElementById("stop-btn")!;
@@ -462,10 +440,6 @@ async function init() {
   await populateSelect(select);
   await updateRunControls();
   setInterval(() => void updateRunControls(), 3000);
-
-  profileSelect.addEventListener("change", () => {
-    if (profileSelect.value) applyProfile(profileSelect.value);
-  });
 
   packSelect.addEventListener("change", () => {
     fillProblemsForPack(packSelect.value);
@@ -477,7 +451,11 @@ async function init() {
 
   document.getElementById("problems-list")!.addEventListener("change", () => {
     syncWorldCountToTasks();
+    updateDurationHint();
   });
+
+  document.getElementById("slot-input")!.addEventListener("input", () => updateDurationHint());
+  document.getElementById("duration-input")!.addEventListener("input", () => updateDurationHint());
 
   runForm.addEventListener("submit", async (e) => {
     e.preventDefault();

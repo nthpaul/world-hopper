@@ -60,6 +60,11 @@ export function renderResults(
     isLive ? Date.now() : new Date(data.endedAt || data.updatedAt || data.startedAt).getTime();
   const runMs = endMs - new Date(data.startedAt).getTime();
   const { config, aggregates, slots } = data;
+  const tasksTotal = aggregates.tasksTotal ?? config.worldCount;
+  const tasksSolved = aggregates.tasksSolved ?? 0;
+  const tasksAttempted = aggregates.tasksAttempted ?? slots.length;
+  const solveRate = aggregates.solveRate ?? (tasksTotal > 0 ? tasksSolved / tasksTotal : 0);
+  const totalSolveDurationMs = aggregates.totalSolveDurationMs ?? 0;
   const statusBadge = data.status
     ? `<span class="status-badge status-${data.status}">${statusLabel(data.status)}</span>`
     : "";
@@ -100,8 +105,9 @@ export function renderResults(
           })()
         : "";
       const isActive = data.currentSlot?.worldId === id;
-      return `<div class="world-cell${isActive ? " world-cell-active" : ""}">
-        <div class="world-cell-id">world-<span class="num">${id}</span></div>
+      const notVisited = visits === 0;
+      return `<div class="world-cell${isActive ? " world-cell-active" : ""}${notVisited ? " world-cell-not-visited" : ""}">
+        <div class="world-cell-id">world-<span class="num">${id}</span>${notVisited ? " <span class=\"world-missed\">not visited</span>" : ""}</div>
         <div class="world-cell-assigned">${assignedLabel || "—"}</div>
         <div class="world-cell-visits num">${visits} visit${visits === 1 ? "" : "s"}</div>
         <div class="world-cell-solved">${solvedLabels.length ? solvedLabels.join("; ") : "—"}</div>
@@ -190,9 +196,25 @@ export function renderResults(
 
     <div class="stats">
       <div class="stat">
-        <div class="stat-label">Solved</div>
-        <div class="stat-value num">${aggregates.totalSolvedDelta}</div>
+        <div class="stat-label">Tasks solved</div>
+        <div class="stat-value num">${tasksSolved}<span class="stat-denom">/${tasksTotal}</span></div>
       </div>
+      <div class="stat">
+        <div class="stat-label">Solve rate</div>
+        <div class="stat-value num">${Math.round(solveRate * 100)}%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Attempted</div>
+        <div class="stat-value num">${tasksAttempted}<span class="stat-denom">/${tasksTotal}</span></div>
+      </div>
+      ${
+        totalSolveDurationMs > 0
+          ? `<div class="stat">
+        <div class="stat-label">Total solve time</div>
+        <div class="stat-value">${fmtDuration(totalSolveDurationMs)}</div>
+      </div>`
+          : ""
+      }
       <div class="stat">
         <div class="stat-label">Slots</div>
         <div class="stat-value num">${aggregates.totalSlots}${data.currentSlot ? '<span class="stat-live">+</span>' : ""}</div>
@@ -226,6 +248,12 @@ export function renderResults(
         <dt>Task pack</dt><dd>${config.taskPack ?? "example"}</dd>
         <dt>Profile</dt><dd>${config.profileName ?? "—"}</dd>
         <dt>Seed</dt><dd class="num">${config.benchSeed}</dd>
+        <dt>Max bench time</dt><dd>${fmtDuration(config.benchDurationMs)}</dd>
+        ${
+          config.worldVisitOrder?.length
+            ? `<dt>Visit order</dt><dd>${config.worldVisitOrder.map((id) => `world-<span class="num">${id}</span>`).join(" → ")}</dd>`
+            : ""
+        }
         <dt>Started</dt><dd>${fmtTime(data.startedAt)}</dd>
         ${endedRow}
         <dt>Agent</dt><dd style="word-break:break-all;font-size:0.85rem">${data.agentId || "—"}</dd>
@@ -239,7 +267,7 @@ export function renderResults(
     <section>
       <h2>World timeline</h2>
       <div class="timeline">${timeline || "<em>No slots yet</em>"}</div>
-      <p class="timeline-legend">Each block is one slot; color = world id${data.currentSlot ? "; pulsing = in progress" : ""}</p>
+      <p class="timeline-legend">Each block is one slot in visit order; color = world id${data.currentSlot ? "; pulsing = in progress" : ""}</p>
     </section>
 
     <section>

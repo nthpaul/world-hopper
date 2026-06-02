@@ -7,6 +7,7 @@ export type BenchConfig = {
   taskPack: string;
   problemIds?: string[];
   worldAssignments: Record<string, string>;
+  worldVisitOrder: string[];
   agentStubCwd: string;
   resultsDir: string;
   sandboxEnabled: boolean;
@@ -92,6 +93,7 @@ export type BenchResults = {
     taskPack: string;
     problemIds?: string[];
     worldAssignments?: Record<string, string>;
+    worldVisitOrder?: string[];
     profileName?: string;
   };
   agentId: string;
@@ -101,6 +103,11 @@ export type BenchResults = {
     totalSolvedDelta: number;
     uniqueSolvedByWorld: Record<string, string[]>;
     perWorldVisitCount: Record<string, number>;
+    tasksTotal: number;
+    tasksAttempted: number;
+    tasksSolved: number;
+    totalSolveDurationMs: number;
+    solveRate: number;
   };
 };
 

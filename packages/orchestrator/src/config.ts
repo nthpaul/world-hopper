@@ -12,6 +12,10 @@ import {
   parseWorldAssignments,
   toStringKeyAssignments,
 } from "./world-assignments.js";
+import {
+  buildWorldVisitOrder,
+  worldVisitOrderIds,
+} from "./world-visit-order.js";
 import { listProblems as listPackProblems } from "./task-packs.js";
 
 function parseIntEnv(name: string, fallback: number): number {
@@ -41,6 +45,10 @@ function resolveWorldAssignments(
   return toStringKeyAssignments(built);
 }
 
+function resolveWorldVisitOrder(benchSeed: number, worlds: WorldEndpoint[]): string[] {
+  return worldVisitOrderIds(buildWorldVisitOrder(benchSeed, worlds));
+}
+
 export function loadConfigFromEnv(): BenchConfig {
   const apiKey = process.env.CURSOR_API_KEY;
   if (!apiKey) {
@@ -55,6 +63,7 @@ export function loadConfigFromEnv(): BenchConfig {
   const activeProblemIds =
     problemIds ?? listPackProblems(taskPack).map((p) => p.id);
   const worldAssignments = resolveWorldAssignments(benchSeed, worlds, activeProblemIds);
+  const worldVisitOrder = resolveWorldVisitOrder(benchSeed, worlds);
 
   return {
     apiKey,
@@ -65,6 +74,7 @@ export function loadConfigFromEnv(): BenchConfig {
     taskPack,
     problemIds,
     worldAssignments,
+    worldVisitOrder,
     agentStubCwd: process.env.AGENT_STUB_CWD ?? "/app/agent-stub",
     resultsDir: process.env.RESULTS_DIR ?? "/app/results",
     sandboxEnabled: process.env.LOCAL_SANDBOX_ENABLED === "true",
@@ -182,6 +192,10 @@ export function resolveBenchConfig(argv: string[]): BenchConfig {
       overrides.worlds ?? base.worlds,
       (overrides.problemIds ?? base.problemIds) ??
         listPackProblems(overrides.taskPack ?? base.taskPack).map((p) => p.id),
+    ),
+    worldVisitOrder: resolveWorldVisitOrder(
+      overrides.benchSeed ?? base.benchSeed,
+      overrides.worlds ?? base.worlds,
     ),
   };
 }

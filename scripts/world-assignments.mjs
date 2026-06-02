@@ -40,6 +40,16 @@ export function formatWorldAssignments(assignments) {
     .join(",");
 }
 
+export function buildWorldVisitOrderIds(seed, worldCount) {
+  const rng = createSeededRng((seed + 1) >>> 0);
+  const ids = Array.from({ length: worldCount }, (_, worldId) => String(worldId));
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
 export function resolveProblemIds(profile, root, readFileSync, existsSync, join) {
   if (profile.problems?.length) return profile.problems;
   const packId = profile.taskPack ?? "example";

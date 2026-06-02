@@ -1,6 +1,6 @@
 import { Agent, CursorAgentError, type Run } from "@cursor/sdk";
 import { basename } from "node:path";
-import { buildSlotPrompt, createSeededRng, pickRandomWorld } from "./world-picker.js";
+import { buildSlotPrompt } from "./world-picker.js";
 import { getAssignedProblemId } from "./world-assignments.js";
 import { fetchWorldStatus, sleep } from "./world-client.js";
 import {
@@ -8,9 +8,10 @@ import {
   buildResultsConfig,
   mergeWorldSnapshots,
   publishLiveResults,
+  reconcileTasksSolved,
   writeResults,
 } from "./results.js";
-import type { BenchConfig, BenchResults, LiveCurrentSlot, SlotRecord, WorldStatusSnapshot } from "./types.js";
+import type { BenchConfig, BenchResults, LiveCurrentSlot, SlotRecord, WorldEndpoint, WorldStatusSnapshot } from "./types.js";
 import { debugLog } from "./debug-log.js";
 import { buildRunName } from "./run-name.js";
 import { consumeRunStreamWithLive, LiveSlotTracker } from "./live-activity.js";
@@ -63,13 +64,29 @@ function isAssignedTaskSolved(
   return summary.lastSuccessfulSubmit?.problemId === assignedProblemId;
 }
 
+function resolveVisitOrder(config: BenchConfig): WorldEndpoint[] {
+  const worldById = new Map(config.worlds.map((world) => [world.id, world]));
+  return config.worldVisitOrder.map((worldId) => {
+    const world = worldById.get(worldId);
+    if (!world) {
+      throw new Error(`Unknown world id in visit order: ${worldId}`);
+    }
+    return world;
+  });
+}
+
 export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   const startedAt = new Date().toISOString();
   const runName = buildRunName(config);
-  const rng = createSeededRng(config.benchSeed);
+  const tasksTotal = config.worlds.length;
+  const visitOrder = resolveVisitOrder(config);
   const slots: SlotRecord[] = [];
-  let aggregates = buildAggregates(slots);
+  let aggregates = buildAggregates(slots, tasksTotal);
   let agentId = "";
+
+  console.log(
+    `[bench] visit order: ${visitOrder.map((world) => `world-${world.id}`).join(" → ")}`,
+  );
 
   publishLiveResults(config.resultsDir, {
     status: "starting",
@@ -120,10 +137,16 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
     });
 
     const benchDeadline = Date.now() + config.benchDurationMs;
-    let slotIndex = 0;
 
-    while (Date.now() < benchDeadline) {
-      const world = pickRandomWorld(config.worlds, rng);
+    for (let slotIndex = 0; slotIndex < visitOrder.length; slotIndex++) {
+      if (Date.now() >= benchDeadline) {
+        console.log(
+          `[bench] stopped at slot ${slotIndex}/${visitOrder.length}: max bench time reached`,
+        );
+        break;
+      }
+
+      const world = visitOrder[slotIndex]!;
       const slotStarted = new Date();
       slotTracker = new LiveSlotTracker();
 
@@ -290,8 +313,9 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         solveDurationMs,
       });
 
-      aggregates = buildAggregates(slots);
+      aggregates = buildAggregates(slots, tasksTotal);
       mergeWorldSnapshots(aggregates, world.id, after.solvedIds);
+      reconcileTasksSolved(aggregates, config.worldAssignments);
       publishLiveResults(config.resultsDir, {
         status: "running",
         startedAt,
@@ -303,7 +327,6 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         aggregates,
       });
 
-      slotIndex += 1;
       currentRun = undefined;
       streamTask = undefined;
       slotTracker = undefined;
@@ -330,7 +353,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   }
 
   const endedAt = new Date().toISOString();
-  aggregates = buildAggregates(slots);
+  aggregates = buildAggregates(slots, tasksTotal);
 
   const finalStatuses = await Promise.all(
     config.worlds.map(async (w) => ({ worldId: w.id, status: await fetchWorldStatus(w.statusUrl) })),
@@ -338,6 +361,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
   for (const { worldId, status } of finalStatuses) {
     aggregates.uniqueSolvedByWorld[worldId] = status.solvedIds;
   }
+  reconcileTasksSolved(aggregates, config.worldAssignments);
 
   const results: BenchResults = {
     runName,
@@ -366,7 +390,10 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
     JSON.stringify(
       {
         slots: slots.length,
-        totalSolvedDelta: aggregates.totalSolvedDelta,
+        tasksSolved: aggregates.tasksSolved,
+        tasksTotal: aggregates.tasksTotal,
+        solveRate: aggregates.solveRate,
+        totalSolveDurationMs: aggregates.totalSolveDurationMs,
         perWorld: aggregates.uniqueSolvedByWorld,
       },
       null,
