@@ -1,0 +1,23 @@
+{
+  "name": "cursor-world-hop-bench",
+  "private": true,
+  "workspaces": [
+    "packages/orchestrator",
+    "packages/world",
+    "packages/viewer"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "bench": "npm run bench -w @cursor-world-hop-bench/orchestrator",
+    "bench:list": "npm run bench -w @cursor-world-hop-bench/orchestrator -- --list-problems",
+    "compose:bench": "node scripts/run-compose-bench.mjs",
+    "viewer": "npm run dev -w @cursor-world-hop-bench/viewer",
+    "viewer:build": "npm run build -w @cursor-world-hop-bench/viewer",
+    "world:dev": "TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @cursor-world-hop-bench/world",
+    "compose:build": "docker compose build",
+    "compose:up": "docker compose up --abort-on-container-exit agent"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

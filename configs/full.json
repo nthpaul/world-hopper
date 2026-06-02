@@ -1,0 +1,9 @@
+{
+  "name": "full",
+  "model": "composer-2.5",
+  "slotMs": 30000,
+  "durationSec": 180,
+  "benchSeed": 42,
+  "taskPack": "example",
+  "worldCount": 8
+}

@@ -1,0 +1,39 @@
+{
+  "packId": "maze",
+  "features": ["maze"],
+  "problems": [
+    {
+      "id": "maze-easy",
+      "title": "Plan a path through the easy maze",
+      "prompt": "Read maze/easy/layout.txt. Walls are #, start S, exit E. Submit a move sequence using N,S,E,W or D,R,U,L (example: DDRR or SSRR) via submit(problemId='maze-easy', answer='...').",
+      "artifacts": ["maze/easy/layout.txt", "maze/legend.txt"],
+      "mazeLayout": "maze/easy/layout.txt",
+      "verify": {
+        "type": "mazePath",
+        "layout": "maze/easy/layout.txt"
+      }
+    },
+    {
+      "id": "maze-medium",
+      "title": "Plan a path through the medium maze",
+      "prompt": "Read maze/medium/layout.txt and legend. Find a valid path from S to E and submit it as N/S/E/W moves (no commas needed).",
+      "artifacts": ["maze/medium/layout.txt", "maze/legend.txt"],
+      "mazeLayout": "maze/medium/layout.txt",
+      "verify": {
+        "type": "mazePath",
+        "layout": "maze/medium/layout.txt"
+      }
+    },
+    {
+      "id": "maze-walk",
+      "title": "Walk the maze to the exit",
+      "prompt": "Use move(problemId='maze-walk', direction='E'|'W'|'N'|'S') to walk from S to E in maze/walk/layout.txt. Call maze_status to see your position. When atExit is true, call submit(problemId='maze-walk').",
+      "artifacts": ["maze/walk/layout.txt", "maze/legend.txt"],
+      "mazeLayout": "maze/walk/layout.txt",
+      "allowMove": true,
+      "verify": {
+        "type": "mazeAtExit"
+      }
+    }
+  ]
+}

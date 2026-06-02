@@ -1,0 +1,10 @@
+{
+  "name": "math-only",
+  "model": "composer-2.5",
+  "slotMs": 20000,
+  "durationSec": 60,
+  "benchSeed": 42,
+  "taskPack": "example",
+  "problems": ["math-quiz", "sum-numbers"],
+  "worldCount": 4
+}

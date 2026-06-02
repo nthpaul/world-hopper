@@ -1,0 +1,9 @@
+{
+  "name": "maze",
+  "model": "composer-2.5",
+  "slotMs": 25000,
+  "durationSec": 90,
+  "benchSeed": 42,
+  "taskPack": "maze",
+  "worldCount": 8
+}

@@ -1,0 +1,112 @@
+x-world-common: &world-common
+  build:
+    context: .
+    dockerfile: packages/world/Dockerfile
+  networks:
+    - bench
+  volumes:
+    - ./task-packs:/task-packs:ro
+    - ./.cursor:/app/.cursor-debug
+  environment: &world-env
+    TASK_PACK_PATH: /task-packs/${TASK_PACK:-example}
+    PROBLEM_IDS: ${PROBLEM_IDS:-}
+    WORLD_ROOT: /world
+    PORT: "3100"
+    DEBUG_LOG_PATH: /app/.cursor-debug/debug-afd95d.log
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: packages/orchestrator/Dockerfile
+    env_file:
+      - .env
+    networks:
+      - bench
+    depends_on:
+      - world-0
+      - world-1
+      - world-2
+      - world-3
+      - world-4
+      - world-5
+      - world-6
+      - world-7
+    environment:
+      CURSOR_API_KEY: ${CURSOR_API_KEY:-}
+      SLOT_MS: ${SLOT_MS:-5000}
+      WORLD_COUNT: ${WORLD_COUNT:-8}
+      BENCH_DURATION_MS: ${BENCH_DURATION_MS:-120000}
+      BENCH_SEED: ${BENCH_SEED:-42}
+      MODEL_ID: ${MODEL_ID:-composer-2.5}
+      TASK_PACK: ${TASK_PACK:-example}
+      PROBLEM_IDS: ${PROBLEM_IDS:-}
+      BENCH_CONFIG: ${BENCH_CONFIG:-}
+      BENCH_PROFILE: ${BENCH_PROFILE:-}
+      AGENT_STUB_CWD: /app/agent-stub
+      RESULTS_DIR: /app/results
+      DEBUG_LOG_PATH: /app/.cursor-debug/debug-afd95d.log
+    volumes:
+      - ./results:/app/results
+      - ./.cursor:/app/.cursor-debug
+      - ./configs:/app/configs:ro
+
+  world-0:
+    <<: *world-common
+    container_name: world-0
+    environment:
+      <<: *world-env
+      WORLD_ID: "0"
+
+  world-1:
+    <<: *world-common
+    container_name: world-1
+    environment:
+      <<: *world-env
+      WORLD_ID: "1"
+
+  world-2:
+    <<: *world-common
+    container_name: world-2
+    environment:
+      <<: *world-env
+      WORLD_ID: "2"
+
+  world-3:
+    <<: *world-common
+    container_name: world-3
+    environment:
+      <<: *world-env
+      WORLD_ID: "3"
+
+  world-4:
+    <<: *world-common
+    container_name: world-4
+    environment:
+      <<: *world-env
+      WORLD_ID: "4"
+
+  world-5:
+    <<: *world-common
+    container_name: world-5
+    environment:
+      <<: *world-env
+      WORLD_ID: "5"
+
+  world-6:
+    <<: *world-common
+    container_name: world-6
+    environment:
+      <<: *world-env
+      WORLD_ID: "6"
+
+  world-7:
+    <<: *world-common
+    container_name: world-7
+    environment:
+      <<: *world-env
+      WORLD_ID: "7"
+
+networks:
+  bench:
+    driver: bridge

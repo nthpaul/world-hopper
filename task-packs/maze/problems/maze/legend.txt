@@ -1,0 +1,8 @@
+Maze legend:
+  # = wall (cannot enter)
+  S = start
+  E = exit (goal)
+  . = open floor
+
+Moves: N/U north, S/D south, E/R east, W/L west (one step per move).
+You may use either long (NSEW) or short (UDRL) letters in submitted paths.

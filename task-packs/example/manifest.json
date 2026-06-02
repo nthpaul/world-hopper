@@ -1,0 +1,92 @@
+{
+  "packId": "example",
+  "problems": [
+    {
+      "id": "fix-config",
+      "title": "Fix broken app config",
+      "prompt": "The app healthcheck fails. Use read_file to inspect app/config.yaml, then run_shell to set port to 8080 (e.g. sed). Call submit with problemId fix-config when done.",
+      "artifacts": ["app/config.yaml", "app/verify.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/app/verify.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "find-flag",
+      "title": "Find the hidden flag",
+      "prompt": "Read secrets/notes.txt and submit the flag value as the answer field.",
+      "artifacts": ["secrets/notes.txt"],
+      "verify": {
+        "type": "jsonMatch",
+        "expected": { "answer": "FLAG{world-hop-bench}" }
+      }
+    },
+    {
+      "id": "math-quiz",
+      "title": "Answer the math quiz",
+      "prompt": "Read quiz/question.txt and submit the numeric answer via submit(problemId=math-quiz, answer=<number>).",
+      "artifacts": ["quiz/question.txt"],
+      "verify": {
+        "type": "jsonMatch",
+        "expected": { "answer": 42 }
+      }
+    },
+    {
+      "id": "fix-permissions",
+      "title": "Fix script permissions",
+      "prompt": "The deploy script cannot run. Fix permissions on scripts/deploy.sh so verify passes, then submit.",
+      "artifacts": ["scripts/deploy.sh", "scripts/verify-deploy.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/scripts/verify-deploy.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "patch-env",
+      "title": "Set required environment variable",
+      "prompt": "Read env/.env.example and create env/.env with BENCH_TOKEN=ready, then submit.",
+      "artifacts": ["env/.env.example", "env/check.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/env/check.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "sum-numbers",
+      "title": "Add two numbers",
+      "prompt": "Read math/a.txt and math/b.txt, then submit the sum as answer.",
+      "artifacts": ["math/a.txt", "math/b.txt"],
+      "verify": {
+        "type": "jsonMatch",
+        "expected": { "answer": 15 }
+      }
+    },
+    {
+      "id": "write-greeting",
+      "title": "Write a greeting file",
+      "prompt": "Create greeting/hello.txt with exactly the content 'bench-ok' using write_file, then submit.",
+      "artifacts": ["greeting/README.txt"],
+      "verify": {
+        "type": "fileContains",
+        "path": "greeting/hello.txt",
+        "expected": "bench-ok"
+      }
+    },
+    {
+      "id": "pick-color",
+      "title": "Pick the correct color",
+      "prompt": "Read trivia/color.txt and submit the color name mentioned as answer.",
+      "artifacts": ["trivia/color.txt"],
+      "verify": {
+        "type": "jsonMatch",
+        "expected": { "answer": "cyan" }
+      }
+    }
+  ]
+}

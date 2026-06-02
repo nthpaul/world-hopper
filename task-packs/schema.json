@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskPackManifest",
+  "type": "object",
+  "required": ["packId", "problems"],
+  "properties": {
+    "packId": { "type": "string" },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "prompt", "artifacts", "verify"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "prompt": { "type": "string" },
+          "artifacts": { "type": "array", "items": { "type": "string" } },
+          "allowShell": { "type": "boolean" },
+          "verify": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["type", "cmd"],
+                "properties": {
+                  "type": { "const": "command" },
+                  "cmd": { "type": "string" },
+                  "timeoutMs": { "type": "number" }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "path", "expected"],
+                "properties": {
+                  "type": { "const": "fileContains" },
+                  "path": { "type": "string" },
+                  "expected": { "type": "string" }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "expected"],
+                "properties": {
+                  "type": { "const": "jsonMatch" },
+                  "expected": { "type": "object" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

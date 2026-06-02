@@ -1,0 +1,10 @@
+{
+  "name": "quick",
+  "model": "composer-2.5",
+  "slotMs": 15000,
+  "durationSec": 60,
+  "benchSeed": 42,
+  "taskPack": "example",
+  "problems": ["math-quiz", "find-flag", "sum-numbers"],
+  "worldCount": 8
+}
