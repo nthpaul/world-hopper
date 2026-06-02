@@ -60,24 +60,6 @@ The run form:
 
 Cream UI, Georgia prose, monospace numbers.
 
-## Bench profiles (`configs/`)
-
-Profiles set model, slot duration, total runtime, task pack, and which problems are active:
-
-| Profile | Model | Slot | Duration | Problems |
-|---------|-------|------|----------|----------|
-| [`configs/quick.json`](configs/quick.json) | composer-2.5 | 15s | 60s | math-quiz, find-flag, sum-numbers |
-| [`configs/math-only.json`](configs/math-only.json) | composer-2.5 | 20s | 60s | math-quiz, sum-numbers |
-| [`configs/maze.json`](configs/maze.json) | composer-2.5 | 25s | 90s | all maze pack problems |
-| [`configs/full.json`](configs/full.json) | composer-2.5 | 30s | 240s | all example pack problems (8 worlds) |
-| [`configs/full-gpt-5-5.json`](configs/full-gpt-5-5.json) | gpt-5.5 | 30s | 240s | all example pack problems (8 worlds) |
-
-Run a profile with Docker (sets env for agent + worlds):
-
-```bash
-npm run compose:bench -- configs/math-only.json
-```
-
 Local orchestrator only:
 
 ```bash
@@ -91,7 +73,7 @@ npm run bench:list
 # or: npm run bench -- --list-problems --pack example
 ```
 
-### CLI overrides
+## CLI overrides
 
 Any profile field can be overridden on the command line:
 
@@ -106,7 +88,7 @@ npm run bench -- \
 
 When using Docker, `TASK_PACK`, `PROBLEM_IDS`, and `WORLD_ASSIGNMENTS` must match on **both** agent and world containers (use `compose:bench` or the viewer dashboard — assignments are computed automatically).
 
-### Maze world (`task-packs/maze`)
+## Maze world (`task-packs/maze`)
 
 Dedicated pack with maze problems and extra MCP tools `move` and `maze_status`:
 
