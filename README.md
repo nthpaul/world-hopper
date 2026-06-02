@@ -2,6 +2,8 @@
 
 Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **world** container once (seeded order), solving pluggable task-pack problems via HTTP MCP.
 
+![World-Hop Benchmark viewer](docs/images/viewer.png)
+
 ## Architecture
 
 - **Agent container** — orchestrator + `@cursor/sdk` local agent (stub `cwd`, real work via MCP)
