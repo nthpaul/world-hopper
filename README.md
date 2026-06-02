@@ -90,7 +90,11 @@ When using Docker, `TASK_PACK`, `PROBLEM_IDS`, and `WORLD_ASSIGNMENTS` must matc
 
 ## Maze world (`task-packs/maze`)
 
-Dedicated pack with maze problems and extra MCP tools `move` and `maze_status`:
+Dedicated pack with maze problems and extra MCP tools `move` and `maze_status`.
+
+![Live maze solve — maze-walk on world-1 with path trail and activity feed](docs/images/viewer-maze-live.png)
+
+*Live view during `configs/maze.json`: agent walking `maze-walk` step-by-step via `move`, grid updates as the path grows.*
 
 | Problem | Type | Description |
 |---------|------|-------------|
