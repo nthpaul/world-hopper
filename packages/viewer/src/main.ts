@@ -25,7 +25,7 @@ function shell() {
   app.innerHTML = `
     <div class="layout">
       <header>
-        <h1>World-Hop Benchmark</h1>
+        <h1>World Hop Benchmark</h1>
         <p>Configure and run benchmarks, watch results update live</p>
       </header>
 

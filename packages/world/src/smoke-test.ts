@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   });
   const flagResult = await runVerifier(flag.verify, {
     worldRoot: runtime.pack.worldRoot,
-    answer: "FLAG{world-hop-bench}",
+    answer: "FLAG{world-hop-benchmark}",
   });
 
   console.log("math-quiz:", mathResult);

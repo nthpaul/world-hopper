@@ -1,5 +1,5 @@
 {
-  "name": "@cursor-world-hop-bench/world",
+  "name": "@world-hop-benchmark/world",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -221,7 +221,7 @@ export function renderResults(
     ${livePanel}
     <header class="results-header">
       <div>
-        <h1>World-Hop Benchmark ${statusBadge}</h1>
+        <h1>World Hop Benchmark ${statusBadge}</h1>
         <p>${sourceLabel}</p>
       </div>
     </header>

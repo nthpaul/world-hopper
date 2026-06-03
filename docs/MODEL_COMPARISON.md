@@ -1,4 +1,4 @@
-# Model comparison (World-Hop Benchmark)
+# Model comparison (World Hop Benchmark)
 
 Generated: 2026-06-03T06:21:52.991Z
 

@@ -1,5 +1,5 @@
 {
-  "name": "@cursor-world-hop-bench/orchestrator",
+  "name": "@world-hop-benchmark/orchestrator",
   "version": "0.1.0",
   "private": true,
   "type": "module",

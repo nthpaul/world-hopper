@@ -20,7 +20,7 @@
       "artifacts": ["secrets/notes.txt"],
       "verify": {
         "type": "jsonMatch",
-        "expected": { "answer": "FLAG{world-hop-bench}" }
+        "expected": { "answer": "FLAG{world-hop-benchmark}" }
       }
     },
     {

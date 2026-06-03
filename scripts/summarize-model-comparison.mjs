@@ -155,7 +155,7 @@ function main() {
 
   const generatedAt = new Date().toISOString();
   const lines = [];
-  lines.push("# Model comparison (World-Hop Benchmark)");
+  lines.push("# Model comparison (World Hop Benchmark)");
   lines.push("");
   lines.push(`Generated: ${generatedAt}`);
   lines.push("");

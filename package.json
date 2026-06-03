@@ -1,5 +1,5 @@
 {
-  "name": "cursor-world-hop-bench",
+  "name": "world-hop-benchmark",
   "private": true,
   "workspaces": [
     "packages/orchestrator",
@@ -8,14 +8,14 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "bench": "npm run bench -w @cursor-world-hop-bench/orchestrator",
-    "bench:list": "npm run bench -w @cursor-world-hop-bench/orchestrator -- --list-problems",
+    "bench": "npm run bench -w @world-hop-benchmark/orchestrator",
+    "bench:list": "npm run bench -w @world-hop-benchmark/orchestrator -- --list-problems",
     "compose:bench": "node scripts/run-compose-bench.mjs",
     "compare:models": "node scripts/run-model-comparison.mjs",
     "compare:summarize": "node scripts/summarize-model-comparison.mjs",
-    "viewer": "npm run dev -w @cursor-world-hop-bench/viewer",
-    "viewer:build": "npm run build -w @cursor-world-hop-bench/viewer",
-    "world:dev": "WORLD_ID=0 WORLD_ASSIGNMENTS=0:math-quiz TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @cursor-world-hop-bench/world",
+    "viewer": "npm run dev -w @world-hop-benchmark/viewer",
+    "viewer:build": "npm run build -w @world-hop-benchmark/viewer",
+    "world:dev": "WORLD_ID=0 WORLD_ASSIGNMENTS=0:math-quiz TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @world-hop-benchmark/world",
     "compose:build": "docker compose build",
     "compose:up": "docker compose up --abort-on-container-exit agent"
   },

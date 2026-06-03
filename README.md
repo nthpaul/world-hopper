@@ -1,8 +1,8 @@
-# World-Hop Benchmark
+# World Hop Benchmark
 
 Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **world** container once (seeded order), solving pluggable task-pack problems via HTTP MCP.
 
-World-Hop Benchmark viewer — quick profile, 3/3 solved
+World Hop Benchmark viewer — quick profile, 3/3 solved
 
 *Completed `configs/quick.json` run after rebuild: 3 worlds, 3/3 tasks solved, 11s total.*
 

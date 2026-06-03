@@ -209,7 +209,7 @@ export function resolveBenchConfig(argv: string[]): BenchConfig {
 }
 
 export function printHelp(): void {
-  console.log(`cursor-world-hop-bench orchestrator
+  console.log(`world-hop-benchmark orchestrator
 
 Usage:
   npm run bench -- [options]

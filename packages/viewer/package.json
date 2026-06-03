@@ -1,5 +1,5 @@
 {
-  "name": "@cursor-world-hop-bench/viewer",
+  "name": "@world-hop-benchmark/viewer",
   "version": "0.1.0",
   "private": true,
   "type": "module",
