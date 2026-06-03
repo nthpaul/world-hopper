@@ -57,6 +57,19 @@ npm run compose:bench -- configs/quick.json
 
 Results land in `./results/<timestamp>.json`.
 
+### Multi-model comparison
+
+Run a fixed matrix (models × suites × seeds) and regenerate the report:
+
+```bash
+npm run compare:models          # sweep (see configs/model-comparison/manifest.json)
+npm run compare:summarize       # writes docs/MODEL_COMPARISON.md
+```
+
+Flags: `--dry-run`, `--only quick`, `--only-model gpt-5.5`, `--from-run 12`, `--sleep-ms 5000`, `--no-build`.
+
+Latest results: [docs/MODEL_COMPARISON.md](docs/MODEL_COMPARISON.md).
+
 View results in the browser:
 
 ```bash

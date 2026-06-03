@@ -7,12 +7,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import {
-  buildWorldAssignments,
-  formatWorldAssignments,
-  resolveProblemIds,
-  validateBenchDuration,
-} from "./world-assignments.mjs";
+import { buildComposeEnv } from "./bench-env.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = process.argv[2] ?? "configs/quick.json";
@@ -24,42 +19,23 @@ if (!existsSync(resolved)) {
 }
 
 const profile = JSON.parse(readFileSync(resolved, "utf8"));
-const env = { ...process.env };
 
-if (profile.model) env.MODEL_ID = profile.model;
-if (profile.slotMs !== undefined) env.SLOT_MS = String(profile.slotMs);
-if (profile.benchDurationMs !== undefined) {
-  env.BENCH_DURATION_MS = String(profile.benchDurationMs);
-} else if (profile.durationSec !== undefined) {
-  env.BENCH_DURATION_MS = String(profile.durationSec * 1000);
-}
-if (profile.benchSeed !== undefined) env.BENCH_SEED = String(profile.benchSeed);
-if (profile.taskPack) env.TASK_PACK = profile.taskPack;
-const worldCount = profile.worldCount ?? 8;
-const problemIds = resolveProblemIds(profile, root, readFileSync, existsSync, join);
-const slotMs = profile.slotMs ?? Number.parseInt(env.SLOT_MS ?? "5000", 10);
-const benchDurationMs =
-  profile.benchDurationMs ??
-  (profile.durationSec !== undefined ? profile.durationSec * 1000 : undefined) ??
-  Number.parseInt(env.BENCH_DURATION_MS ?? "120000", 10);
-
+let env;
+let worldCount;
 try {
-  validateBenchDuration(slotMs, benchDurationMs, worldCount);
+  ({ env, worldCount } = buildComposeEnv(
+    profile,
+    root,
+    readFileSync,
+    existsSync,
+    join,
+    process.env,
+    { benchProfile: profile.name ?? configPath },
+  ));
 } catch (err) {
-  console.error(err instanceof Error ? err.message : err);
+  console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
 }
-
-env.PROBLEM_IDS = problemIds.join(",");
-if (profile.worldCount !== undefined) env.WORLD_COUNT = String(profile.worldCount);
-env.WORLD_ASSIGNMENTS = formatWorldAssignments(
-  buildWorldAssignments({
-    seed: profile.benchSeed ?? 42,
-    worldCount,
-    problemIds,
-  }),
-);
-env.BENCH_PROFILE = profile.name ?? configPath;
 
 console.log("Running bench profile:", env.BENCH_PROFILE);
 console.log(

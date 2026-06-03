@@ -1,0 +1,14 @@
+{
+  "models": [
+    { "label": "Composer 2.5", "id": "composer-2.5" },
+    { "label": "Opus 4.8", "id": "claude-opus-4-8" },
+    { "label": "GPT 5.5", "id": "gpt-5.5" },
+    { "label": "Opus 4.7", "id": "claude-opus-4-7" }
+  ],
+  "suites": [
+    "configs/quick.json",
+    "configs/maze.json",
+    "configs/full.json"
+  ],
+  "seeds": [42, 43, 44]
+}
