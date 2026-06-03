@@ -12,6 +12,19 @@ Eval-style harness: one durable Cursor SDK agent visits each isolated Docker **w
 - **World containers** (`world-0` … `world-N`) — each hosts **one unique task** for the run
 - **Task packs** — pluggable JSON manifests under `task-packs/`
 
+### Cursor Agent SDK, not chat completion
+
+This benchmark does **not** call a raw chat-completions API or maintain its own `messages[]` tool loop. The orchestrator uses **`@cursor/sdk`’s `Agent` harness**:
+
+1. **`Agent.create`** — one durable agent for the whole run (local `cwd` = [`packages/agent-stub`](packages/agent-stub); tasks are not solved in that tree).
+2. **`agent.send(prompt, { mcpServers })`** — each world visit starts a new SDK **`Run`** with the `world` HTTP MCP server attached for that slot only.
+3. **`run.stream()`** — the harness drives the model/tool loop; the orchestrator only consumes events (assistant text, thinking, MCP tool calls) for the live viewer and metrics.
+4. **`run.cancel()`** — when a task is solved early or the slot times out, the orchestrator stops the run; SDK status may read `cancelled` even when the bench records `exitReason: solved`.
+
+Work happens in world containers via MCP (`get_problem`, `read_file`, `submit`, maze `move`, etc.). Cursor hooks in the stub workspace **deny** local `read`/`write`/`shell` tools so the agent is pushed toward world MCP only (see [`packages/agent-stub/.cursor/hooks/mcp-only.js`](packages/agent-stub/.cursor/hooks/mcp-only.js)).
+
+That is the same **programmatic agent runtime** Cursor exposes for SDK/CLI agents—not the IDE chat panel, and not a hand-rolled OpenAI-style completion client. Scoring still comes from each world’s HTTP `/status`, not from parsing the model’s final message.
+
 At bench start, selected tasks are shuffled (seeded) and assigned 1:1 to worlds via `WORLD_ASSIGNMENTS`. The agent visits **each world exactly once** in a seeded visit order (`worldVisitOrder`). It **cannot choose tasks** — it must solve whichever task is assigned to the world it lands on. **`worldCount` must equal the number of selected tasks**.
 
 Each slot ends as soon as the assigned task is successfully submitted (`slotMs` is a per-slot timeout cap). **`benchDurationMs`** is the total wall-clock cap and must be at least **`slotMs × worldCount`** so every world can be visited if each slot uses its full timeout. Runs still end early when tasks are solved quickly; partial coverage only occurs if the agent is slow within individual slot caps.
