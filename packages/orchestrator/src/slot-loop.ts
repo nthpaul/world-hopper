@@ -5,6 +5,7 @@ import { getAssignedProblemId } from "./world-assignments.js";
 import { fetchWorldStatus, sleep } from "./world-client.js";
 import {
   buildAggregates,
+  rebuildAggregates,
   buildResultsConfig,
   mergeWorldSnapshots,
   publishLiveResults,
@@ -313,7 +314,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         solveDurationMs,
       });
 
-      aggregates = buildAggregates(slots, tasksTotal);
+      aggregates = rebuildAggregates(slots, tasksTotal, aggregates.uniqueSolvedByWorld);
       mergeWorldSnapshots(aggregates, world.id, after.solvedIds);
       reconcileTasksSolved(aggregates, config.worldAssignments);
       publishLiveResults(config.resultsDir, {

@@ -52,6 +52,19 @@ export function buildAggregates(
   };
 }
 
+/** Rebuild slot-derived aggregates without dropping per-world solve snapshots. */
+export function rebuildAggregates(
+  slots: SlotRecord[],
+  tasksTotal: number,
+  previousUniqueSolvedByWorld: Record<string, string[]>,
+): BenchResults["aggregates"] {
+  const aggregates = buildAggregates(slots, tasksTotal);
+  for (const [worldId, solvedIds] of Object.entries(previousUniqueSolvedByWorld)) {
+    mergeWorldSnapshots(aggregates, worldId, solvedIds);
+  }
+  return aggregates;
+}
+
 export function mergeWorldSnapshots(
   aggregates: BenchResults["aggregates"],
   worldId: string,
