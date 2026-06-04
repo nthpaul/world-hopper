@@ -1,5 +1,7 @@
 # World Hop Benchmark
 
+![Live bench run in the viewer — solve rate, world timeline, and MCP activity](docs/images/viewer-live-run.gif)
+
 **One Cursor SDK agent. Many isolated Docker worlds. One visit each—solve the task, then hop.**
 
 Eval-style harness for comparing models on real tool use: the agent connects to a single world per slot via HTTP MCP, cannot browse your repo, and must submit verified solutions before the orchestrator moves on.
@@ -38,7 +40,6 @@ The browser UI at [http://localhost:5173](http://localhost:5173) is the control 
 
 | View | Screenshot | What it shows |
 |------|------------|---------------|
-| **Live run** | [viewer-live-run.gif](docs/images/viewer-live-run.gif) | Screen capture — stats, timeline, and activity feed during a bench |
 | **Results** | [viewer-results.png](docs/images/viewer-results.png) | Stats, visit-order timeline, per-slot outcomes |
 | **New run** | [viewer-dashboard.png](docs/images/viewer-dashboard.png) | Model, timing, task pack, task selection, validation |
 | **Live maze** | [viewer-maze-live.png](docs/images/viewer-maze-live.png) | Grid + path trail + MCP activity during `maze-walk` |
@@ -52,10 +53,6 @@ npm run viewer
 Use **Start run** for Docker benches, **Watch live** during a run, or pick a past result from the dropdown.
 
 ![Live maze — agent mid-run on maze-walk with grid and activity feed](docs/images/viewer-maze-live.png)
-
-![Live bench run in the viewer — solve rate, world timeline, and MCP activity](docs/images/viewer-live-run.gif)
-
-*~24s screen recording (`docs/images/viewer-live-run.gif`, 960px wide).*
 
 ---
 
