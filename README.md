@@ -1,10 +1,10 @@
 # World Hop Benchmark
 
-![Live bench run in the viewer — solve rate, world timeline, and MCP activity](docs/images/viewer-live-run.gif)
-
 **One Cursor SDK agent. Many isolated Docker worlds. One visit each—solve the task, then hop.**
 
 Eval-style harness for comparing models on real tool use: the agent connects to a single world per slot via HTTP MCP, cannot browse your repo, and must submit verified solutions before the orchestrator moves on.
+
+![Live bench run in the viewer — solve rate, world timeline, and MCP activity](docs/images/viewer-live-run.gif)
 
 ---
 
