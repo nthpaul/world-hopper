@@ -1,0 +1,9 @@
+{
+  "name": "computer-use",
+  "model": "composer-2.5",
+  "slotMs": 20000,
+  "durationSec": 120,
+  "benchSeed": 42,
+  "taskPack": "computer-use",
+  "worldCount": 6
+}

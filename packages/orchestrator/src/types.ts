@@ -76,6 +76,7 @@ export type SlotRecord = {
   maze?: LiveMazeState;
   exitReason?: "solved" | "timeout";
   solveDurationMs?: number;
+  activity?: LiveActivityEvent[];
 };
 
 export type BenchRunStatus = "starting" | "running" | "complete" | "failed" | "stopped";

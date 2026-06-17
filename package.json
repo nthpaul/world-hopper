@@ -13,6 +13,7 @@
     "compose:bench": "node scripts/run-compose-bench.mjs",
     "compare:models": "node scripts/run-model-comparison.mjs",
     "compare:summarize": "node scripts/summarize-model-comparison.mjs",
+    "export:trajectories": "node scripts/export-trajectories.mjs",
     "viewer": "npm run dev -w @world-hop-benchmark/viewer",
     "viewer:build": "npm run build -w @world-hop-benchmark/viewer",
     "world:dev": "WORLD_ID=0 WORLD_ASSIGNMENTS=0:math-quiz TASK_PACK_PATH=task-packs/example WORLD_ROOT=/tmp/world-bench npm run dev -w @world-hop-benchmark/world",

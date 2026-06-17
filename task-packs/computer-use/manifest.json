@@ -1,0 +1,73 @@
+{
+  "packId": "computer-use",
+  "problems": [
+    {
+      "id": "fix-service-config",
+      "title": "Fix broken service config",
+      "prompt": "The service healthcheck fails. Use read_file to inspect service/config.yaml, then run_shell to set port to 8080 (e.g. sed). Call submit with problemId fix-service-config when done.",
+      "artifacts": ["service/config.yaml", "service/verify.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/service/verify.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "deploy-script",
+      "title": "Fix deploy script permissions",
+      "prompt": "The deploy script cannot run. Fix permissions on scripts/deploy.sh so verify passes, then submit.",
+      "artifacts": ["scripts/deploy.sh", "scripts/verify-deploy.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/scripts/verify-deploy.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "set-env-token",
+      "title": "Create environment file",
+      "prompt": "Read env/.env.example and create env/.env with SERVICE_TOKEN=bench-ready, then submit.",
+      "artifacts": ["env/.env.example", "env/check.sh"],
+      "allowShell": true,
+      "verify": {
+        "type": "command",
+        "cmd": "bash /world/env/check.sh",
+        "timeoutMs": 3000
+      }
+    },
+    {
+      "id": "file-support-ticket",
+      "title": "File a support ticket",
+      "prompt": "Read inbox/customer.json and write support/ticket.txt with these lines exactly:\ncustomerId: <id>\nname: <name>\nemail: <email>\nissue: <issue>\nThen submit.",
+      "artifacts": ["inbox/customer.json", "support/README.txt"],
+      "verify": {
+        "type": "fileContains",
+        "path": "support/ticket.txt",
+        "expected": "customerId: C-1042\nname: Jane Doe\nemail: jane@example.com\nissue: Cannot access dashboard after password reset"
+      }
+    },
+    {
+      "id": "csv-total",
+      "title": "Sum sales CSV",
+      "prompt": "Read data/sales.csv and submit the total of the amount column as answer via submit(problemId=csv-total, answer=<number>).",
+      "artifacts": ["data/sales.csv"],
+      "verify": {
+        "type": "jsonMatch",
+        "expected": { "answer": 255.5 }
+      }
+    },
+    {
+      "id": "policy-ack",
+      "title": "Acknowledge data policy",
+      "prompt": "Read policy.md and write compliance/ack.txt containing the exact acknowledgment phrase required by the policy, then submit.",
+      "artifacts": ["policy.md", "compliance/README.txt"],
+      "verify": {
+        "type": "fileContains",
+        "path": "compliance/ack.txt",
+        "expected": "ACK: data-retention-v2"
+      }
+    }
+  ]
+}

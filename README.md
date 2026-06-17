@@ -6,6 +6,8 @@ Eval-style harness for comparing models on real tool use: the agent connects to 
 
 ![Live bench run in the viewer — solve rate, world timeline, and MCP activity](docs/images/viewer-live-run.gif)
 
+World Hop Benchmark is an **eval gym for tool-using agents**: isolated worlds, MCP tools, and deterministic verifiers instead of LLM-as-judge scoring. See [docs/VISION.md](docs/VISION.md) for the problem framing, world-hop thesis, and roadmap context.
+
 ---
 
 ## Model comparison at a glance
@@ -43,6 +45,7 @@ The browser UI at [http://localhost:5173](http://localhost:5173) is the control 
 | **Results** | [viewer-results.png](docs/images/viewer-results.png) | Stats, visit-order timeline, per-slot outcomes |
 | **New run** | [viewer-dashboard.png](docs/images/viewer-dashboard.png) | Model, timing, task pack, task selection, validation |
 | **Live maze** | [viewer-maze-live.png](docs/images/viewer-maze-live.png) | Grid + path trail + MCP activity during `maze-walk` |
+| **Computer-use pack** | [`computer-use`](task-packs/computer-use/manifest.json) | 6 file/shell tasks — [`configs/computer-use.json`](configs/computer-use.json) |
 
 ![Configure a run — model, slot/bench caps, task pack, and tasks](docs/images/viewer-dashboard.png)
 
@@ -73,6 +76,21 @@ Results land in `./results/<timestamp>.json`.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    orchestrator[Orchestrator]
+    worlds[World containers]
+    verifiers[Verifiers]
+    results[Results JSON]
+    viewer[Viewer UI]
+
+    orchestrator -->|"one slot per world"| worlds
+    worlds --> verifiers
+    verifiers --> orchestrator
+    orchestrator --> results
+    results --> viewer
+```
+
 - **Agent container** — orchestrator + `@cursor/sdk` local agent (stub `cwd`, real work via MCP)
 - **World containers** (`world-0` … `world-N`) — each hosts **one unique task** for the run
 - **Task packs** — pluggable JSON manifests under `task-packs/`
@@ -102,6 +120,8 @@ Each slot ends as soon as the assigned task is successfully submitted (`slotMs` 
 - Docker Compose v2
 - `CURSOR_API_KEY` with SDK access
 
+CI runs build, smoke tests, verifier golden tests, and `docker compose build` on every PR ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Optional weekly `quick` bench when `CURSOR_API_KEY` is configured as a repo secret.
+
 ---
 
 ## Multi-model comparison (detail)
@@ -113,6 +133,7 @@ Suites and configs:
 | **quick** | [`configs/quick.json`](configs/quick.json) | `example` | 3 of 8 (`math-quiz`, `find-flag`, `sum-numbers`) |
 | **maze** | [`configs/maze.json`](configs/maze.json) | `maze` | `maze-easy`, `maze-medium`, `maze-walk` |
 | **full** | [`configs/full.json`](configs/full.json) | `example` | all 8 example tasks |
+| **computer-use** | [`configs/computer-use.json`](configs/computer-use.json) | `computer-use` | 6 file/shell workflows |
 
 **Maze task styles** (failures cluster by style):
 
@@ -125,6 +146,16 @@ Suites and configs:
 Per-model, per-seed tables and raw JSON paths: **[docs/MODEL_COMPARISON.md](docs/MODEL_COMPARISON.md)**.
 
 Sweep flags: `--dry-run`, `--only quick`, `--only-model gpt-5.5`, `--from-run 12`, `--sleep-ms 5000`, `--no-build`.
+
+---
+
+## Computer-use pack (`task-packs/computer-use`)
+
+Representative file-and-shell workflows (config fix, deploy script, env setup, support ticket, CSV total, policy ack). See [docs/VISION.md](docs/VISION.md).
+
+```bash
+npm run compose:bench -- configs/computer-use.json
+```
 
 ---
 
@@ -256,9 +287,11 @@ Orchestrator scores via `GET /status` on each world.
 
 ## Results JSON
 
-Each run records per-slot metrics (`worldId`, `solvedDelta`, `solveDurationMs`, `exitReason`, `runId`, `assistantChars`) and aggregates (`totalSolvedDelta`, `perWorldVisitCount`, `uniqueSolvedByWorld`).
+Each run records per-slot metrics (`worldId`, `solvedDelta`, `solveDurationMs`, `exitReason`, `runId`, `assistantChars`, optional `activity` trajectory) and aggregates (`totalSolvedDelta`, `perWorldVisitCount`, `uniqueSolvedByWorld`).
 
 Slots end as soon as the assigned task is successfully submitted; failed submits may retry until the slot timeout (`SLOT_MS`).
+
+Export slot trajectories to JSONL for analysis or dataset construction: [docs/TRAJECTORIES.md](docs/TRAJECTORIES.md) (`npm run export:trajectories`).
 
 ---
 

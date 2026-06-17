@@ -1,0 +1,81 @@
+# CI for World Hop Benchmark
+#
+# PRs and pushes to master run build-and-test only (no Cursor API key required).
+# Full compose benchmark (bench-quick) runs on workflow_dispatch or schedule when
+# the repository secret CURSOR_API_KEY is configured.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspaces
+        run: npm run build
+
+      - name: World smoke test
+        run: npm run smoke -w @world-hop-benchmark/world
+
+      - name: Maze smoke test
+        run: npm run smoke:maze -w @world-hop-benchmark/world
+
+      - name: Verifier golden tests
+        run: npm run test:verifiers -w @world-hop-benchmark/world
+
+      - name: Validate Docker images build
+        run: docker compose build
+
+  bench-quick:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Skip benchmark without API key
+        if: secrets.CURSOR_API_KEY == ''
+        run: |
+          echo "::notice title=Benchmark skipped::PR and push CI skip the full API benchmark. Configure the CURSOR_API_KEY repository secret to enable bench-quick on workflow_dispatch or schedule."
+
+      - name: Run quick compose benchmark
+        if: secrets.CURSOR_API_KEY != ''
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: npm run compose:bench -- configs/quick.json
+
+      - name: Upload benchmark results
+        if: secrets.CURSOR_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-quick-results
+          path: results/
+          if-no-files-found: warn

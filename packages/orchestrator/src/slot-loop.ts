@@ -312,6 +312,7 @@ export async function runBenchmark(config: BenchConfig): Promise<BenchResults> {
         maze: streamResult.maze,
         exitReason: slotExitReason,
         solveDurationMs,
+        activity: slotTracker.snapshot(),
       });
 
       aggregates = rebuildAggregates(slots, tasksTotal, aggregates.uniqueSolvedByWorld);

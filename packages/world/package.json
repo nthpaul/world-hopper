@@ -7,6 +7,8 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "smoke": "tsx src/smoke-test.ts",
+    "smoke:maze": "tsx src/maze-smoke-test.ts",
+    "test:verifiers": "tsx --test src/verifier.test.ts",
     "start": "node dist/index.js"
   },
   "dependencies": {

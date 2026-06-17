@@ -69,6 +69,7 @@ export type BenchResults = {
     maze?: LiveMazeState;
     exitReason?: "solved" | "timeout";
     solveDurationMs?: number;
+    activity?: LiveActivityEvent[];
   }>;
   aggregates: {
     totalSlots: number;
