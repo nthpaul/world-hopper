@@ -61,19 +61,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Skip benchmark without API key
-        if: secrets.CURSOR_API_KEY == ''
-        run: |
-          echo "::notice title=Benchmark skipped::PR and push CI skip the full API benchmark. Configure the CURSOR_API_KEY repository secret to enable bench-quick on workflow_dispatch or schedule."
-
       - name: Run quick compose benchmark
-        if: secrets.CURSOR_API_KEY != ''
+        id: bench
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: npm run compose:bench -- configs/quick.json
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "ran=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Benchmark skipped::Configure the CURSOR_API_KEY repository secret to enable bench-quick on workflow_dispatch or schedule."
+            exit 0
+          fi
+          npm run compose:bench -- configs/quick.json
+          echo "ran=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload benchmark results
-        if: secrets.CURSOR_API_KEY != ''
+        if: steps.bench.outputs.ran == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: bench-quick-results
